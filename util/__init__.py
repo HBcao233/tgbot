@@ -1,0 +1,155 @@
+import asyncio
+import hashlib
+import random
+import re
+import ujson as json
+import httpx
+import traceback
+import os.path
+from typing import Union
+
+import config
+from util.log import logger
+
+
+async def request(
+    method, url, params=None, data=None, proxy=False, headers=None, **kwargs
+):
+    client = httpx.AsyncClient(
+        proxies=config.proxies if proxy else None, verify=False)
+    r = await client.request(
+        method, url=url, headers=headers, data=data, params=params, **kwargs
+    )
+    logger.info(f"{method} {url} code: {r.status_code}")
+    await client.aclose()
+    return r
+
+
+async def get(url, proxy=False, headers=None, params=None, data=None, **kwargs):
+    return await request(
+        "GET", url, params=params, data=data, proxy=proxy, headers=headers, **kwargs
+    )
+
+
+async def post(url, proxy=False, headers=None, params=None, data=None, **kwargs):
+    return await request(
+        "POST", url, params=params, data=data, proxy=proxy, headers=headers, **kwargs
+    )
+
+
+async def getImg(
+    url, proxy=True, cache=True, path=None, headers=None, rand=False, ext=False
+) -> str:
+    """
+    获取下载广义上的图片，可以为任意文件
+
+    Args:
+        url: 图片url，或图片bytes
+        proxy: 是否使用代理
+        path: 保存路径， 不填默认为 gocqhttp/data/cache/{md5(url)}.cache
+        headers: 指定headers，如 p站图片需要{"Referer": "https://www.pixiv.net"}
+        rand: 是否在文件结尾加入随机字符串
+
+    Returns:
+        str: 图片路径
+    """
+    if not os.path.exists('data/cache'): os.makedirs('data/cache')
+    b = isinstance(url, bytes)
+    url_tip = f'{url if not b else ""}{"bytes" if b else ""}'
+    logger.info(f"尝试获取图片 (proxy:{proxy}, headers:{headers}) {url_tip}")
+
+    if not b and url.find("file://") >= 0:
+        if path is None:
+            path = url[7:]
+        if rand:
+            with open(path, "ab") as f:
+                f.write(randStr().encode())
+        logger.info(f"获取图片成功: {path}")
+        await asyncio.sleep(0.001)
+        return path
+
+    if b:
+        md5 = md5sum(byte=url)
+        gopath = f"/data/cache/{md5}.cache"
+        if path is None:
+            path = config.botRoot + gopath
+        with open(path, "wb") as f:
+            f.write(url)
+
+        if rand:
+            with open(path, "ab") as f:
+                f.write(randStr().encode())
+
+        logger.info(f"获取图片成功: {path}")
+        return path
+    else:
+        md5 = md5sum(string=url)
+        gopath = f"/data/cache/{md5}.cache"
+        if ext:
+            ex = url.split(".")[-1]
+            ex = re.sub(r"(\?.*)?(#.*)?(:.*)?", "", ex)
+            gopath = f"/data/cache/{md5}.{ex}"
+        if path is None:
+            path = config.botRoot + gopath
+
+        if not os.path.isfile(path) or not cache:
+            r = await get(
+                url,
+                headers=headers,
+                proxy=proxy,
+                timeout=httpx.Timeout(
+                    timeout=60, connect=60, read=60, write=60),
+            )
+            with open(path, "wb") as f:
+                f.write(r.content)
+
+            if rand:
+                with open(path, "ab") as f:
+                    f.write(randStr().encode())
+
+        logger.info(f"获取图片成功: {path}")
+        return path
+        
+
+def randStr(length: int = 8) -> str:
+    """
+    随机字符串
+
+    Args:
+        length: 字符串长度, 默认为 8
+
+    Returns:
+        str: 字符串
+    """
+    chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    res = ""
+    for i in range(length):
+        res += random.choice(chars)
+    return res
+
+
+def md5sum(
+    *, string: Union[str, bytes] = None, byte: bytes = None, file_path: str = None
+) -> str:
+    """
+    计算字符串或文件的 md5 值
+
+    Args:
+        string: 字符串（三选一）
+        byte: bytes（三选一）
+        file_path: 文件路径（三选一）
+
+    Returns:
+        str: md5
+    """
+    if string:
+        if isinstance(string, bytes):
+            return hashlib.md5(string).hexdigest()
+        return hashlib.md5(string.encode()).hexdigest()
+    if byte:
+        return hashlib.md5(byte).hexdigest()
+    if file_path:
+        with open(file_path, "rb") as fp:
+            data = fp.read()
+        return hashlib.md5(data).hexdigest()
+    return ""
