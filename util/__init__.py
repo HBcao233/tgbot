@@ -91,7 +91,10 @@ async def getImg(
             gopath = f"/data/cache/{md5}.{ex}"
         if path is None:
             path = config.botRoot + gopath
-
+        
+        if os.path.isfile(config.botRoot + f"/data/cache/{md5}.png"):
+          path = config.botRoot + f"/data/cache/{md5}.png"
+        
         if not os.path.isfile(path) or not cache:
             r = await get(
                 url,

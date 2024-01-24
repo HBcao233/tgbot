@@ -90,7 +90,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = parsePidMsg(res["body"])
 
     imgUrl = res["body"]["urls"]["original"]
-    imgUrl = imgUrl.replace("i.pximg.net", "i.pixiv.re")
+    #imgUrl = imgUrl.replace("i.pximg.net", "i.pixiv.re")
 
     count = res["body"]["pageCount"]
     pcount = (count - 1) // 9 + 1
@@ -103,12 +103,14 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}",
         )
         ms = []
-        for i in range(p * 9, min((p + 1) * 9, count)):
+        flag = False
+        i = p * 9
+        while i < min((p + 1) * 9, count):
             url = imgUrl.replace("_p0", f"_p{i}")
             try:
                 img = await util.getImg(url, headers=config.pixiv_headers, proxy=True)
             except Exception:
-                await update.message.reply_text(
+                return await update.message.reply_text(
                     (
                         f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
                         if min((p + 1) * 9, count) != 1
@@ -116,7 +118,6 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     ) + "图片获取失败",
                     reply_to_message_id=update.message.message_id,
                 )
-                continue
                 
             caption = (
                 (msg if i == 0 else "")
@@ -130,7 +131,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             stats = os.stat(img)
             size_M = stats.st_size // 1024 // 1024
-            if size_M < 5:
+            if size_M < 5 and not flag:
                 ms.append(
                     InputMediaPhoto(
                         media=open(img, "rb"),
@@ -140,6 +141,11 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 )
             elif size_M < 20:
+                if not flag:
+                    i = 0
+                    flag = True
+                    ms = []
+                    continue
                 portion = os.path.splitext(img)
                 new_img = portion[0] + ".png"
                 os.rename(img, new_img)
@@ -151,14 +157,16 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 )
             else:
-                await update.message.reply_text(
+                return await update.message.reply_text(
                     (
                         f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
                         if min((p + 1) * 9, count) != 1
                         else ""
                     )
-                    + "图片过大"
+                    + "图片过大",
+                    reply_to_message_id=update.message.message_id,
                 )
+            i += 1
 
         try:
             await update.message.reply_media_group(
@@ -279,7 +287,7 @@ async def _(update, context, query):
   )
   
   
-  def parsePidMsg(res):
+def parsePidMsg(res):
     pid = res["illustId"]
 
     # tags = []
