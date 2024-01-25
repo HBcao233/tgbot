@@ -27,36 +27,39 @@ from plugin import handler, inline_handler
     
 
 @handler('pid', 
-  private_pattern=r"(^https://(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( ?hide ?)?( ?mark ?)?$)|"
-                  r"^(https://(www.)?pixiv.net/(artworks|i)/)?\d{6,12}(\?.*)?(#.*)?( ?hide ?)?( ?mark ?)?$",
-  pattern=r"(^((pid|Pid|PID) ?)https://(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( ?hide ?)?( ?mark ?)?$)|"
-        r"^((pid|Pid|PID) ?)(https://(www.)?pixiv.net/(artworks|i)/)?\d{6,12}(\?.*)?(#.*)?( ?hide ?)?( ?mark ?)?$",
+  private_pattern=r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( .*)?$)|"
+                  r"^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}(\?.*)?(#.*)?( .*)?$",
+  pattern=r"(^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( .*)?$)|"
+        r"^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}(\?.*)?(#.*)?( .*)?$",
 )
 async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text: str = update.message["text"]
 
     hide = False
     mark = False
+    origin = False
     args = text.split(" ")
     if len(args) >= 2:
         text = args[0]
-        if "hide" in args:
-            hide = True
-        if "mark" in args:
-            mark = True
+        if "hide" in args or '省略' in args: hide = True
+        if "mark" in args or '遮罩' in args: mark = True
+        if 'origin' in args or '原图' in args: origin = True
     logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
 
     pid = re.sub(r"((pid|Pid|PID) ?)?", "", text)
     pid = re.sub(
-        r"^https://(www.)?pixiv.net/member_illust.php?.*illust_id=", "", pid
+        r"^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=", "", pid
     ).strip()
-    pid = re.sub(r"(https://(www.)?pixiv.net/(artworks|i)/)?", "", pid).strip()
+    pid = re.sub(r"((https?://)?(www.)?pixiv.net/(artworks|i)/)?", "", pid).strip()
     pid = re.sub(r"(_.*)(\?.*)?(#.*)?", "", pid).strip()
     logger.info(f"pid: {pid}")
     if pid == "":
         return await update.message.reply_text(
-            "用法: /pid <url/pid>\n"
+            "用法: /pid <url/pid> [hide/省略] [mark/遮罩] [origin/原图]\n"
             "url/pid: p站链接或pid\n"
+            "[hide/省略]: 省略图片说明\n"
+            "[mark/遮罩]: 给图片添加遮罩\n"
+            "[origin/原图]: 发送原图\n"
             "私聊小派魔时可以省略/tid，直接发送<url/pid>哦\n"
             "或者使用@hbcao1bot <url/pid>作为内联模式发送~",
             reply_to_message_id=update.message.message_id,
@@ -103,7 +106,6 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}",
         )
         ms = []
-        flag = False
         i = p * 9
         while i < min((p + 1) * 9, count):
             url = imgUrl.replace("_p0", f"_p{i}")
@@ -131,7 +133,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             stats = os.stat(img)
             size_M = stats.st_size // 1024 // 1024
-            if size_M < 5 and not flag:
+            if size_M < 5 and not origin:
                 ms.append(
                     InputMediaPhoto(
                         media=open(img, "rb"),
@@ -141,9 +143,9 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 )
             elif size_M < 20:
-                if not flag:
+                if not origin:
                     i = 0
-                    flag = True
+                    origin = True
                     ms = []
                     continue
                 portion = os.path.splitext(img)
@@ -214,7 +216,8 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #reply_markup = InlineKeyboardMarkup(keyboard)
 
 
-@inline_handler(r"^(https://(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?\d{6,12}(\?.*)?(#.*)?( ?hide ?)?( ?mark ?)?$")
+@inline_handler(r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( .*)?$)|"
+                r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?\d{6,12}(\?.*)?(#.*)?( .*)?$)")
 async def _(update, context, query):
   text = query.replace("/pid", "")
 
@@ -232,7 +235,10 @@ async def _(update, context, query):
   logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
 
   pid = re.sub(
-      r"(https://(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?", "", text
+      r"^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=", "", text
+  ).strip()
+  pid = re.sub(
+      r"((https?://)?(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?", "", pid
   ).strip()
   pid = re.sub(r"(\?.*)?(#.*)?", "", pid).strip()
   if pid == "":
