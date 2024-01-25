@@ -30,9 +30,9 @@ from plugin import handler, inline_handler
   private_pattern=r"^((https?://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?\d{13,}(.*)$",
   pattern=r"^((tid|Tid|TID) ?)((https?://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?\d{13,}(.*)$",
 )
-async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     # print(update.message)
-    text: str = update.message["text"]
+    text: str = update.message["text"] if text is None else text
 
     hide = False
     mark = False

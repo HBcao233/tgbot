@@ -22,8 +22,8 @@ from plugin import handler
   private_pattern=r"((https://)?kemono.(party|su)/)?.+/user/\d+/post/\d+",
   pattern=r"kid ((https://)?kemono.(party|su)/)?.+/user/\d+/post/\d+"
 )
-async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text: str = update.message["text"]
+async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
+    text: str = update.message["text"] if text is None else text
 
     if not re.match(r"https://kemono.(party|su)/.+/user/\d+/post/\d+", text):
         return await update.message.reply_text("请输入k站链接")

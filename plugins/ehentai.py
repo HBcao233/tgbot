@@ -20,8 +20,8 @@ from plugin import handler
   private_pattern=r"https?://e[x-]hentai.org/[sg]/.*",
   pattern=r"eid https?://e[x-]hentai.org/[sg]/.*"
 )
-async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text: str = update.message["text"]
+async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
+    text: str = update.message["text"] if text is None else text
 
     mark = False
     args = text.split(" ")
