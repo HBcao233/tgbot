@@ -70,7 +70,7 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not hide:
         msg = parseTidMsg(tid, res)
     else:
-        msg = f"https://x.com/i/web/status/{tid}"
+        msg = f"https://x.com/i/status/{tid}"
 
     if "extended_entities" not in tweet.keys():
         return await update.message.reply_text(msg, parse_mode="MarkdownV2")
@@ -175,7 +175,7 @@ async def _(update, context, query):
   if not hide:
       msg = parseTidMsg(tid, res)
   else:
-      msg = f"https://x.com/i/web/status/{tid}"
+      msg = f"https://x.com/i/status/{tid}"
   
   if "extended_entities" in tweet.keys():
       medias = tweet["extended_entities"]["media"]
