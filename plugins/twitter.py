@@ -65,7 +65,10 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     res = await get_twitter(tid)
     if type(res) == str:
         return await update.message.reply_text(res)
-
+    if 'tombstone' in res.keys():
+        logger.info(json.dumps(res))
+        return await update.message.reply_text(res['tombstone']['text']['text'])
+    
     tweet = res["legacy"]
     if not hide:
         msg = parseTidMsg(tid, res)
@@ -308,9 +311,9 @@ async def get_twitter(tid):
         entries = tweet_detail["data"]["threaded_conversation_with_injections_v2"][
             "instructions"
         ][0]["entries"]
-        tweet_entrie = list(filter(lambda x: x["entryId"] == f"tweet-{tid}", entries))[
-            0
-        ]
+        tweet_entrie = list(
+          filter(lambda x: x["entryId"] == f"tweet-{tid}", entries)
+        )[0]
         tweet_result = tweet_entrie["content"]["itemContent"]["tweet_results"]["result"]
         if "tweet" in tweet_result.keys():
             return tweet_result["tweet"]
