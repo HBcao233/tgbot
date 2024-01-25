@@ -323,6 +323,7 @@ def parsePidMsg(res):
         .replace(' target="_blank"', "")
     )
     if len(comment) > 200:
+        comment = re.sub('<span[^>]*>(((?!</span>).)*)</span>', '\2', comment)
         comment = re.sub('<[^/]+[^<]*(<[^>]*)?$', '', comment[:200])
         comment = re.sub('\n$','',comment)
         comment = comment + '\n......'
