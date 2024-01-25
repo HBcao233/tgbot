@@ -4,10 +4,11 @@ import os.path
 import config
 from util.log import logger
 
+
 class Command:
   def __init__(self, cmd, func, pattern=None, private_pattern=None):
     self.cmd = cmd
-    self.func = func
+    self.func = self(func)
     self.pattern = pattern
     self.private_pattern = private_pattern
   
@@ -16,6 +17,22 @@ class Command:
     if self.pattern is not None:
       res += f', pattern={self.pattern}'
     return res + ')'
+    
+  def __call__(self, func):
+    def wrapper(update, context, *w_args, **w_kwargs):
+        logger.info(update.message)
+        logger.info(update.message.__class__.__name__)
+        text = (
+            update.message['text']
+            .replace("@"+config.bot.username, "")
+            .replace("/" + self.cmd, "")
+            .replace(self.cmd, "")
+            .replace("/start", "")
+            .replace("-", " ")
+            .strip()
+        )
+        return func(update, context, text, *w_args, **w_kwargs)
+    return wrapper
 
 
 class Inline:
@@ -24,25 +41,21 @@ class Inline:
     self.pattern = pattern
     
   def __str__(self):
-    return f'Inline(func={self.func})'
+    return f'Inline_Handler(func={self.func})'
+
+class Button:
+  def __init__(self, func, pattern):
+    self.func = func
+    self.pattern = pattern
+    
+  def __str__(self):
+    return f'Button_Handler(func={self.func})'
 
 
 def handler(cmd, **kwargs):
     def deco(func):
       config.commands.append(Command(cmd, func, **kwargs))
-      
-      def wrapper(update, context):
-        update.message["text"] = (
-          update.message["text"]
-          .replace("@"+config.bot.username, "")
-          .replace("/"+cmd, "")
-          .replace(cmd, "")
-          .replace("/start", "")
-          .replace("-", " ")
-          .strip()
-        )
-        return func(update, context)
-      return wrapper
+      return func
     return deco
     
     
@@ -53,6 +66,13 @@ def inline_handler(pattern):
   return deco
     
     
+def button_handler(pattern):
+  def deco(func):
+    config.buttons.append(Button(func, pattern))
+    return func
+  return deco
+  
+  
 def load_plugin(name):
   try:
     __import__(name, fromlist=[None])

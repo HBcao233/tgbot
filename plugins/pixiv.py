@@ -23,7 +23,7 @@ import os.path
 import config
 import util
 from util.log import logger
-from plugin import handler, inline_handler
+from plugin import handler, inline_handler, button_handler
     
 
 @handler('pid', 
@@ -32,8 +32,8 @@ from plugin import handler, inline_handler
   pattern=r"(^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( .*)?$)|"
         r"^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}(\?.*)?(#.*)?( .*)?$",
 )
-async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text: str = update.message["text"]
+async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
+    text: str = update.message["text"] if text is None else text
 
     hide = False
     mark = False
@@ -97,7 +97,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     count = res["body"]["pageCount"]
     pcount = (count - 1) // 9 + 1
-    bot = update.get_bot()
+    bot = context.bot
     for p in range(pcount):
         await bot.edit_message_text(
             chat_id=update.message.chat_id,
@@ -201,19 +201,20 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
+    keyboard = [
+        [
+            InlineKeyboardButton("获取原图", callback_data=f"{pid} {'hide' if hide else ''} origin"),
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     mid = await update.message.reply_text(
         "获取完成", 
-        reply_to_message_id=update.message.message_id
+        reply_to_message_id=update.message.message_id,
+        reply_markup=reply_markup if not origin else None,
     )
-    await asyncio.sleep(1)
-    await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
-    #keyboard = [
-    #    [
-    #        InlineKeyboardButton("⭕ 发送", callback_data="done"),
-    #        InlineKeyboardButton("❌ 取消", callback_data="cancel"),
-    #    ],
-    #]
-    #reply_markup = InlineKeyboardMarkup(keyboard)
+    #await asyncio.sleep(1)
+    #await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
+    #
 
 
 @inline_handler(r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( .*)?$)|"
@@ -293,20 +294,33 @@ async def _(update, context, query):
   )
   
   
+@button_handler(pattern=r"^\d{6,12}( .*)?$")
+async def _(update, context, query):
+  # logger.info(update)
+  message = update.callback_query.message
+  _update = Update(
+    update_id=update.update_id, 
+    message=message, 
+    callback_query=update.callback_query
+  )
+  await message.edit_reply_markup(reply_markup=None)
+  await pid(_update, context, query.data)
+  
+  
 def parsePidMsg(res):
     pid = res["illustId"]
 
-    # tags = []
-    # for i in res["tags"]["tags"]:
-    #     tags.append("#" + i["tag"])
-    #     if "translation" in i.keys():
-    #         tags.append("#" + i["translation"]["en"])
-    # tags = (
-    #     json.dumps(tags, ensure_ascii=False)
-    #     .replace('"', "")
-    #     .replace("[", "")
-    #     .replace("]", "")
-    # )
+    '''tags = []
+    for i in res["tags"]["tags"]:
+        tags.append("#" + i["tag"])
+        if "translation" in i.keys():
+            tags.append("#" + i["translation"]["en"])
+    tags = (
+        json.dumps(tags, ensure_ascii=False)
+        .replace('"', "")
+        .replace("[", "")
+        .replace("]", "")
+    )'''
 
     types = ["插画", "漫画", "动图（不支持发送，请自行访问p站）"]
     
@@ -347,4 +361,5 @@ def parsePidMsg(res):
         f"<a href=\"https://www.pixiv.net/artworks/{pid}/\">From Pixiv at {t.strftime('%Y年%m月%d日 %H:%M:%S')}</a>"
     )
     return msg
-    
+   
+   

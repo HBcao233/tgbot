@@ -118,23 +118,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
     await query.answer()
 
-    if "+re" in query.data:
-        context.user_data["length"] = context.user_data["length.bak"]
-        del context.user_data["length.bak"]
-        for i in range(0, context.user_data["length"]):
-            context.user_data[i] = context.user_data[str(i) + ".bak"]
-            del context.user_data[str(i) + ".bak"]
-
-    if "done" in query.data:
-        await done(update, context)
-        await query.delete_message()
-    elif query.data == "cancel":
-        await cancel(update, context)
-        await query.delete_message()
-    elif "send" in query.data:
-        await query.edit_message_text("发送中")
-        await send(update, context, query.data[4:])
-        await query.delete_message()
+    for i in config.buttons:
+      if re.search(i.pattern, query.data):
+        return await i.func(update, context, query)
 
 
 async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
