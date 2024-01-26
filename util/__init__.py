@@ -7,6 +7,7 @@ import httpx
 import traceback
 import os.path
 from typing import Union
+import urllib.parse
 
 import config
 from util.log import logger
@@ -15,11 +16,23 @@ from util.log import logger
 async def request(
     method, url, params=None, data=None, proxy=False, headers=None, **kwargs
 ):
+    p = urllib.parse.urlparse(url)
+    _headers = {
+       "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",
+       'Referer': p.scheme + '://' + p.netloc + '/'
+    }
+    headers = dict(_headers, **headers) if headers else None
     client = httpx.AsyncClient(
         proxies=config.proxies if proxy else None, verify=False)
     r = await client.request(
         method, url=url, headers=headers, data=data, params=params, **kwargs
     )
+    if r.status_code == 302:
+      url = r.headers['Location']
+      if 'http' not in url: url = p.scheme + '://' + p.netloc + '/' + url
+      r = await client.request(
+        method, url=url, headers=headers, data=data, params=params, **kwargs
+      )
     logger.info(f"{method} {url} code: {r.status_code}")
     await client.aclose()
     return r

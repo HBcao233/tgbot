@@ -131,6 +131,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
                 if len(ms) == 0
                 else None
             )
+            
             stats = os.stat(img)
             size_M = stats.st_size // 1024 // 1024
             if size_M < 5 and not origin:

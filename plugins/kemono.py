@@ -1,4 +1,5 @@
 import re
+import os.path
 import traceback
 import asyncio
 from telegram import (
@@ -6,6 +7,8 @@ from telegram import (
     InputMediaPhoto,
     InputMediaVideo,
     InputMediaDocument,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
 )
 from telegram.ext import ContextTypes
 from bs4 import BeautifulSoup
@@ -15,29 +18,53 @@ from uuid import uuid4
 import config
 import util
 from util.log import logger
-from plugin import handler
+from plugin import handler, button_handler
 
 
+private_pattern = r"((https://)?kemono.(party|su)/)?[^/]+(/user/\d+)?(/post)?/\d+"
 @handler('kid',
-  private_pattern=r"((https://)?kemono.(party|su)/)?.+/user/\d+/post/\d+",
-  pattern=r"kid ((https://)?kemono.(party|su)/)?.+/user/\d+/post/\d+"
+  private_pattern=private_pattern,
+  pattern="kid " + private_pattern
 )
 async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     text: str = update.message["text"] if text is None else text
 
-    if not re.match(r"https://kemono.(party|su)/.+/user/\d+/post/\d+", text):
-        return await update.message.reply_text("请输入k站链接")
-    kid = text
+    hide = False
+    mark = False
+    origin = False
+    args = text.split(" ")
+    if len(args) >= 2:
+        text = args[0]
+        if "hide" in args or '省略' in args: hide = True
+        if "mark" in args or '遮罩' in args: mark = True
+        if 'origin' in args or '原图' in args: origin = True
+    logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
+
+    if not re.match(private_pattern, text):
+        return await update.message.reply_text(
+          "用法: /kid <url> [hide] [mark/遮罩] [origin/原图]"
+        )
+    bot = context.bot
+    _kid = re.sub(r'((https://)?kemono.(party|su)/)?([^/]+)(/user/\d+)?(/post)?/(\d+)', r'\4/\7', text)
+    #logger.info(_kid)
+    arr = _kid.split('/')
+    kid = 'https://kemono.su/' + arr[0] + '/post/' + arr[1]
     mid = await update.message.reply_text(
         "请等待...", reply_to_message_id=update.message.message_id
     )
     r = await util.get(kid, proxy=True, timeout=60)
-    msg, files, other = parseKidMsg(kid, r.text)
-
+    try:
+      msg, files, other = parseKidMsg(kid, r.text, hide)
+    except Exception as e:
+      return await bot.edit_message_text(
+          chat_id=update.message.chat_id,
+          message_id=mid.message_id,
+          text=e,
+      )
+      
     count = len(files)
     piece = 10
     pcount = (count - 1) // piece + 1
-    bot = update.get_bot()
     for p in range(pcount):
         await bot.edit_message_text(
             chat_id=update.message.chat_id,
@@ -46,18 +73,14 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
             + f"{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}",
         )
         ms = []
-        for i in range(p * piece, min((p + 1) * piece, count)):
+        i = p * piece
+        while i < min((p + 1) * piece, count):
             file = files[i]
-            a = {
-                "attachment": InputMediaDocument,
-                "image": InputMediaPhoto,
-                "video": InputMediaVideo,
-            }
             try:
                 img = await util.getImg(file["url"], proxy=True)
             except Exception:
                 return await update.message.reply_text("文件获取失败")
-
+                
             caption = ''
             if p == 0 and len(ms) == 0:
                 caption += msg
@@ -67,13 +90,45 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
                     if min((p + 1) * piece, count) != 1
                     else ""
                 )
-            ms.append(
-                a[file["type"]](
-                    media=open(img, "rb"),
-                    caption=caption,
-                    parse_mode="HTML",
+                
+            stats = os.stat(img)
+            size_M = stats.st_size // 1024 // 1024
+            if size_M < 5 and not origin:
+              ms.append(
+                  InputMediaPhoto(
+                      media=open(img, "rb"),
+                      caption=caption,
+                      parse_mode="HTML",
+                      has_spoiler=mark,
+                  )
+              )
+            elif size_M < 20:
+                if not origin:
+                    i = 0
+                    origin = True
+                    ms = []
+                    continue
+                portion = os.path.splitext(img)
+                new_img = portion[0] + ".png"
+                os.rename(img, new_img)
+                ms.append(
+                    InputMediaDocument(
+                        media=open(new_img, "rb"),
+                        caption=caption,
+                        parse_mode="HTML",
+                    )
                 )
-            )
+            else:
+                return await update.message.reply_text(
+                    (
+                        f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
+                        if min((p + 1) * 9, count) != 1
+                        else ""
+                    )
+                    + "图片过大",
+                    reply_to_message_id=update.message.message_id,
+                )
+            i += 1
 
         try:
             resm = await update.message.reply_media_group(
@@ -107,34 +162,58 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
             parse_mode="HTML",
         )
     await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
+    keyboard = [
+        [
+            InlineKeyboardButton("获取原图", callback_data=f"{_kid} {'hide' if hide else ''} origin"),
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     mid = await update.message.reply_text(
-        "获取完成", reply_to_message_id=update.message.message_id
+        "获取完成", 
+        reply_to_message_id=update.message.message_id,
+        reply_markup=reply_markup if not origin else None,
     )
-    await asyncio.sleep(3)
-    await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
+    #await asyncio.sleep(3)
+    #await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
 
 
-def parseKidMsg(kid, _html):
+@button_handler(pattern=r"[^/]+/\d+")
+async def _(update, context, query):
+    # logger.info(update)
+    message = update.callback_query.message
+    _update = Update(
+      update_id=update.update_id, 
+      message=message, 
+      callback_query=update.callback_query
+    )
+    await message.edit_reply_markup(reply_markup=None)
+    await kid(_update, context, query.data)
+
+
+def parseKidMsg(kid, _html, hide=False):
     soup = BeautifulSoup(_html, "html.parser")
-    user_name = soup.select(".site-section--post .post__header .post__user-name")[
-        0
-    ].text.strip()
-
-    user_u: str = soup.select(".site-section--post .post__header .post__user-name")[
-        0
-    ].attrs["href"]
-    user_uid = user_u.split("/")[-1]
-    user_url = f"https://www.pixiv.net/fanbox/creator/{user_uid}"
-
-    title = soup.select(
-        ".site-section--post .post__header .post__info .post__title span"
-    )[0].text.strip()
-
+    try:
+      user_name = soup.select(".site-section--post .post__header .post__user-name")[
+          0
+      ].text.strip()
+  
+      user_u: str = soup.select(".site-section--post .post__header .post__user-name")[
+          0
+      ].attrs["href"]
+      user_uid = user_u.split("/")[-1]
+      user_url = f"https://www.pixiv.net/fanbox/creator/{user_uid}"
+  
+      title = soup.select(
+          ".site-section--post .post__header .post__info .post__title span"
+      )[0].text.strip()
+    except Exception:
+      raise Exception('解析错误')
     # published_time = soup.select(
     #     ".site-section--post .post__header .post__info .post__published .timestamp"
     # )[0].text.strip()
 
-    msg = f'<a href="{kid}">{title}</a> - <a href="{user_url}">{user_name}</a>:'
+    msg = f'<a href="{kid}">{title}</a> - <a href="{user_url}">{user_name}</a>'
+    if not hide: msg += ':'
     msg1 = ""
     other = []
 
@@ -151,23 +230,24 @@ def parseKidMsg(kid, _html):
             msg1_add(add)
         else:
             msg += add
-
-    post__content = soup.select(
-        ".site-section--post .post__body .post__content")
-    if len(post__content) > 0:
-        contents = post__content[0].children
-        for i in contents:
-            ii = i.text.strip()
-            if ii != "":
-                if i.name == "h2":
-                    add = f"\n<b>{ii}</b>"
-                else:
-                    add = f"\n{ii}"
-                if len(msg + add) < 400:
-                    msg_add(add)
-                else:
-                    msg_add('\n……')
-                    break
+            
+    if not hide:
+      post__content = soup.select(
+          ".site-section--post .post__body .post__content")
+      if len(post__content) > 0:
+          contents = post__content[0].children
+          for i in contents:
+              ii = i.text.strip()
+              if ii != "":
+                  if i.name == "h2":
+                      add = f"\n<b>{ii}</b>"
+                  else:
+                      add = f"\n{ii}"
+                  if len(msg + add) < 400:
+                      msg_add(add)
+                  else:
+                      msg_add('\n……')
+                      break
 
     # msg_add(f'\n\n<a href="{kid}">{published_time}</a>')
     # msg_add(f"\n\n{kid}")
