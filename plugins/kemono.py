@@ -170,7 +170,7 @@ def parseKidMsg(kid, _html):
                     break
 
     # msg_add(f'\n\n<a href="{kid}">{published_time}</a>')
-    msg_add(f"\n\n{kid}")
+    # msg_add(f"\n\n{kid}")
 
     _attachments = soup.select(
         ".site-section--post .post__body .post__attachments li")

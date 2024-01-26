@@ -89,7 +89,8 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if message.photo:
         res = await bot.getFile(file_id=message.photo[-1].file_id)
         await message.reply_text(
-            f'<code>{message.photo[-1].file_id}</code>\n' + res.file_path.replace('api.telegram.org','tgapi.hbcao.top'), 
+            f'<code>{message.photo[-1].file_id}</code>\n' + 
+            re.sub('api.telegram.org/file/[^/]+/', 'tgapi.hbcao.top/', res.file_path), 
             reply_to_message_id=update.message.message_id,
             parse_mode='HTML',
         )
@@ -97,7 +98,8 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         try:
             res = await bot.getFile(file_id=message.video.file_id)
             await message.reply_text(
-                f'<code>{message.video.file_id}</code>\n' + res.file_path.replace('api.telegram.org','tgapi.hbcao.top'), 
+                f'<code>{message.video.file_id}</code>\n' + 
+                re.sub('api.telegram.org/file/[^/]+/', 'tgapi.hbcao.top/', res.file_path), 
                 reply_to_message_id=update.message.message_id,
                 parse_mode='HTML',
             )
