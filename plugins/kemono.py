@@ -62,6 +62,9 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
           text=e,
       )
       
+    if 'fanbox' in _kid and len(files) > 1:
+      files = files[1:]
+      
     count = len(files)
     piece = 10
     pcount = (count - 1) // piece + 1
