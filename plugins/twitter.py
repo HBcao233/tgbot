@@ -67,7 +67,7 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         return await update.message.reply_text(res['tombstone']['text']['text'])
     
     tweet = res["legacy"]
-    msg = parseTidMsg(tid, res, hide)
+    msg = parseTidMsg(tid, res) if not hide else 'https://x.com/i/status/' + tid
   
     if "extended_entities" not in tweet.keys():
         return await update.message.reply_text(msg, parse_mode="MarkdownV2")
@@ -312,7 +312,7 @@ async def get_twitter(tid):
         return "连接超时"
 
 
-def parseTidMsg(tid, res, hide=False):
+def parseTidMsg(tid, res):
     tweet = res["legacy"]
     user = res["core"]["user_results"]["result"]["legacy"]
 
@@ -331,8 +331,9 @@ def parseTidMsg(tid, res, hide=False):
     user_screen_name = user["screen_name"]
     #t = dateutil.parser.parse(tweet["created_at"]) + datetime.timedelta(hours=8)
     #time = t.strftime("%Y年%m月%d日 %H:%M:%S")
-    msg = f'<a href="https://x.com/{user_screen_name}">{user_name}</a>'
-    if not hide: msg += f":\n{full_text}"
+    msg = f"https://x.com/i/status/{tid}"
+          f'\n<a href="https://x.com/{user_screen_name}">{user_name}</a>:'
+          f"\n{full_text}"
     #f"\n\n<a href=\"https://x.com/{user_screen_name}/status/{tid}\">From X at {time}</a>\n"
     
     return msg
