@@ -86,11 +86,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
             '错误: '+res["message"],
             reply_to_message_id=update.message.message_id,
         )
-        
-    if hide:
-        msg = f"https://www.pixiv.net/artworks/{pid}"
-    else:
-        msg = parsePidMsg(res["body"])
+    msg = parsePidMsg(res["body"], hide)
 
     imgUrl = res["body"]["urls"]["original"]
     #imgUrl = imgUrl.replace("i.pximg.net", "i.pixiv.re")
@@ -254,10 +250,8 @@ async def _(update, context, query):
   res = r.json()
   if res["error"]:
       return await update.inline_query.answer([])
-  if not hide:
-      msg = parsePidMsg(res["body"])
-  else:
-      msg = f"https://www.pixiv.net/artworks/{pid}"
+  
+  msg = parsePidMsg(res["body"], hide)
   logger.info(msg)
 
   imgUrl = res["body"]["urls"]["original"]
@@ -308,7 +302,7 @@ async def _(update, context, query):
   await pid(_update, context, query.data)
   
   
-def parsePidMsg(res):
+def parsePidMsg(res, hide=False):
     pid = res["illustId"]
 
     '''tags = []
@@ -323,34 +317,25 @@ def parsePidMsg(res):
         .replace("]", "")
     )'''
 
-    types = ["插画", "漫画", "动图（不支持发送，请自行访问p站）"]
+    #types = ["插画", "漫画", "动图（不支持发送，请自行访问p站）"]
     
     props = []
     if res["tags"]["tags"][0]["tag"] == "R-18":
         props.append('#NSFW')
+    if res["tags"]["tags"][0]["tag"] == "R-18G":
+        props.append('#R18G')
+        props.append('#NSFW')
+    if res['illustType'] == 2:
+      props.append('#动图')
     if res['aiType'] == 2:
         props.append('#AI作品')
     prop = ' '.join(props)
     if prop != '':
         prop += '\n'
     
-    t = dateutil.parser.parse(res["createDate"]) + datetime.timedelta(hours=8)
+    #t = dateutil.parser.parse(res["createDate"]) + datetime.timedelta(hours=8)
 
-    comment = res["illustComment"]
-    comment = (
-        comment.replace("<br />", "\n")
-        .replace("<br/>", "\n")
-        .replace("<br>", "\n")
-        .replace(' target="_blank"', "")
-    )
-    if len(comment) > 200:
-        comment = re.sub('<span[^>]*>(((?!</span>).)*)</span>', '\2', comment)
-        comment = re.sub('<[^/]+[^<]*(<[^>]*)?$', '', comment[:200])
-        comment = re.sub('\n$','',comment)
-        comment = comment + '\n......'
-    if comment != '':
-        comment += '\n\n'
-    msg = (
+    '''msg = (
         f"pid: <code>{pid}</code>\n"
         f"作品类型：{types[res['illustType']]}\n"
         f"标题: <b>{res['illustTitle']}</b>\n"
@@ -360,7 +345,26 @@ def parsePidMsg(res):
         "\n"
         f"{comment}"
         f"<a href=\"https://www.pixiv.net/artworks/{pid}/\">From Pixiv at {t.strftime('%Y年%m月%d日 %H:%M:%S')}</a>"
-    )
+    )'''
+    msg = prop
+    msg += f"<a href=\"https://www.pixiv.net/artworks/{pid}/\">{res['illustTitle']}</a> - <a href=\"https://www.pixiv.net/users/{res['userId']}/\">{res['userName']}</a>"
+    if not hide:
+      comment = res["illustComment"]
+      comment = (
+          comment.replace("<br />", "\n")
+          .replace("<br/>", "\n")
+          .replace("<br>", "\n")
+          .replace(' target="_blank"', "")
+      )
+      if len(comment) > 200:
+          comment = re.sub('<span[^>]*>(((?!</span>).)*)</span>', '\2', comment)
+          comment = re.sub('<[^/]+[^<]*(<[^>]*)?$', '', comment[:200])
+          comment = re.sub('\n$','',comment)
+          comment = comment + '\n......'
+      if comment != '':
+          comment = ':\n' + comment
+      msg += comment
+    
     return msg
    
    
