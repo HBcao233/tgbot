@@ -38,9 +38,9 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         text = args[0]
         if "hide" in args:
             hide = True
-        if "mark" in args:
+        if "mark" in args or '遮罩' in args:
             mark = True
-    logger.info(f"text: {text}, hide: {hide}, mark: {mark}, origin: {origin}")
+    logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
 
     tid = re.sub(
         r"tid|Tid|TID", "", text
@@ -144,14 +144,13 @@ async def _(update, context, query):
   results = []
   hide = False
   mark = False
-  origin = False
   args = text.split(" ")
   if len(args) >= 2:
       text = args[0]
       if "hide" in args or '省略' in args: hide = True
       if "mark" in args or '遮罩' in args: mark = True
       if 'origin' in args or '原图' in args: origin = True
-  logger.info(f"text: {text}, hide: {hide}, mark: {mark}, origin: {origin}")
+  logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
 
   tid = re.sub(
       r"((https://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?((tid|Tid|TID) ?)?", "", text
