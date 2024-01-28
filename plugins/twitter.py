@@ -331,9 +331,11 @@ def parseTidMsg(tid, res):
     user_screen_name = user["screen_name"]
     #t = dateutil.parser.parse(tweet["created_at"]) + datetime.timedelta(hours=8)
     #time = t.strftime("%Y年%m月%d日 %H:%M:%S")
-    msg = f"https://x.com/i/status/{tid}"
-          f'\n<a href="https://x.com/{user_screen_name}">{user_name}</a>:'
-          f"\n{full_text}"
+    msg = (
+      f"https://x.com/i/status/{tid}"
+      f'\n<a href="https://x.com/{user_screen_name}">{user_name}</a>:'
+      f"\n{full_text}"
+    )
     #f"\n\n<a href=\"https://x.com/{user_screen_name}/status/{tid}\">From X at {time}</a>\n"
     
     return msg
