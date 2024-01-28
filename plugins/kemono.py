@@ -23,8 +23,8 @@ from plugin import handler, button_handler
 
 private_pattern = r"((https://)?kemono.(party|su)/)?[^/]+(/user/\d+)?(/post)?/\d+"
 @handler('kid',
-  private_pattern=private_pattern,
-  pattern="kid " + private_pattern
+  private_pattern="^"+private_pattern,
+  pattern="^kid " + private_pattern
 )
 async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     text: str = update.message["text"] if text is None else text
