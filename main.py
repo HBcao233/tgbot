@@ -30,25 +30,25 @@ def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                  exc_info=context.error)
 
 
-async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) -> None:
     message = update.message
     if not message:
         message = update.edited_message
-
-    text = (
+    if text is None:
+      text = (
         message["text"]
         .replace("@"+config.bot.username, "")
         .replace("/start", "")
         .strip()
-    )
+      )
     if text[0] == "/":
-        return
+      return
       
     for i in config.commands:
       if i.private_pattern is not None and str(message.chat.type) == "private" and re.search(i.private_pattern, text):
-          return await i.func(update, context)
+          return await i.func(update, context, text)
       if i.pattern is not None and re.search(i.pattern, text):
-          return await i.func(update, context)
+          return await i.func(update, context, text)
 
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -112,13 +112,11 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
   
 @handler('start')
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
-    #logger.info(update.message)
-    logger.info(f"start: {text}")
-
     if len(text) <= 0:
-        await help(update, context)
-    update.message["text"] = update.message["text"].replace('-', ' ')
-    await handle(update, context)
+        return await help(update, context)
+    text = text.replace("_", " ").strip()
+    logger.info(f"start: {text}")
+    await handle(update, context, text)
 
 
 @handler('help')

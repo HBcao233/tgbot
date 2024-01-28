@@ -19,17 +19,17 @@ class Command:
     return res + ')'
     
   def __call__(self, func):
-    def wrapper(update, context, *w_args, **w_kwargs):
-        #logger.info(update.message)
-        text = (
-            update.message['text']
-            .replace("@"+config.bot.username, "")
-            .replace("/" + self.cmd, "")
-            .replace(self.cmd, "")
-            .replace("/start", "")
-            .replace("-", " ")
-            .strip()
-        )
+    def wrapper(update, context, text=None, *w_args, **w_kwargs):
+        logger.info(update.message)
+        if text is None:
+          text = (
+              update.message['text']
+              .replace("@"+config.bot.username, "")
+              .replace("/" + self.cmd, "")
+              .replace(self.cmd, "")
+              .replace("/start", "")
+              .strip()
+          )
         logger.info(text)
         return func(update, context, text, *w_args, **w_kwargs)
     return wrapper

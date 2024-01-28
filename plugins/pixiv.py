@@ -27,14 +27,12 @@ from plugin import handler, inline_handler, button_handler
     
 
 @handler('pid', 
-  private_pattern=r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( .*)?$)|"
-                  r"^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}(\?.*)?(#.*)?( .*)?$",
-  pattern=r"(^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( .*)?$)|"
-        r"^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}(\?.*)?(#.*)?( .*)?$",
+  private_pattern=r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
+                  r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12})",
+  pattern=r"(^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
+        r"(^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12})",
 )
 async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
-    text: str = update.message["text"] if text is None else text
-
     hide = False
     mark = False
     origin = False
@@ -44,14 +42,14 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
         if "hide" in args or '省略' in args: hide = True
         if "mark" in args or '遮罩' in args: mark = True
         if 'origin' in args or '原图' in args: origin = True
-    logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
+    logger.info(f"text: {text}, hide: {hide}, mark: {mark}, origin: {origin}")
 
     pid = re.sub(r"((pid|Pid|PID) ?)?", "", text)
     pid = re.sub(
         r"^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=", "", pid
     ).strip()
     pid = re.sub(r"((https?://)?(www.)?pixiv.net/(artworks|i)/)?", "", pid).strip()
-    pid = re.sub(r"(_.*)(\?.*)?(#.*)?", "", pid).strip()
+    pid = re.sub(r"/?(\?.*)?(#.*)?", "", pid).strip()
     logger.info(f"pid: {pid}")
     if pid == "":
         return await update.message.reply_text(
@@ -214,23 +212,22 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
     #
 
 
-@inline_handler(r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12}(#.*)?( .*)?$)|"
-                r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?\d{6,12}(\?.*)?(#.*)?( .*)?$)")
+@inline_handler(r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
+                r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?\d{6,12})")
 async def _(update, context, query):
-  text = query.replace("/pid", "")
+  text = query
 
   results = []
   hide = False
   mark = False
-
+  origin = False
   args = text.split(" ")
   if len(args) >= 2:
       text = args[0]
-      if "hide" in args:
-          hide = True
-      if "mark" in args:
-          mark = True
-  logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
+      if "hide" in args or '省略' in args: hide = True
+      if "mark" in args or '遮罩' in args: mark = True
+      if 'origin' in args or '原图' in args: origin = True
+  logger.info(f"text: {text}, hide: {hide}, mark: {mark}, origin: {origin}")
 
   pid = re.sub(
       r"^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=", "", text
@@ -238,7 +235,7 @@ async def _(update, context, query):
   pid = re.sub(
       r"((https?://)?(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?", "", pid
   ).strip()
-  pid = re.sub(r"(\?.*)?(#.*)?", "", pid).strip()
+  pid = re.sub(r"/?(\?.*)?(#.*)?", "", pid).strip()
   if pid == "":
       return
 
@@ -250,9 +247,7 @@ async def _(update, context, query):
   res = r.json()
   if res["error"]:
       return await update.inline_query.answer([])
-  
   msg = parsePidMsg(res["body"], hide)
-  logger.info(msg)
 
   imgUrl = res["body"]["urls"]["original"]
   thumbUrl = res["body"]["urls"]["thumb"]
@@ -273,23 +268,21 @@ async def _(update, context, query):
       )
 
   countFlag = len(results) > 1
+  btn_text = "获取" + ("遮罩" if mark else "全部") + ("原图" if origin else "图片") + ("(隐藏描述)" if hide else "")
+  start_parameter = f"{pid}_{'hide' if hide else ''}_{'mark' if mark else ''}_{'origin' if origin else ''}"
+  logger.info(f"btn_text: {btn_text}, start: {start_parameter}")
+  button = InlineQueryResultsButton(
+      text=btn_text,
+      start_parameter=start_parameter,
+  ) if countFlag or mark else None
   await update.inline_query.answer(
       results,
       cache_time=10,
-      button=InlineQueryResultsButton(
-          text="获取全部图片" + ("(隐藏信息)" if hide else ""),
-          start_parameter=query.replace(" ", "-"),
-      )
-      if countFlag or mark
-      else None,
-      read_timeout=60,
-      write_timeout=60,
-      connect_timeout=60,
-      pool_timeout=60,
+      button=button,
   )
   
   
-@button_handler(pattern=r"^\d{6,12}( .*)?$")
+@button_handler(pattern=r"^\d{6,12}")
 async def _(update, context, query):
   # logger.info(update)
   message = update.callback_query.message

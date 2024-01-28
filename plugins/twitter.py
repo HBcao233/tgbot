@@ -31,9 +31,6 @@ from plugin import handler, inline_handler
   pattern=r"^((tid|Tid|TID) ?)((https?://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?\d{13,}(.*)$",
 )
 async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
-    # print(update.message)
-    text: str = update.message["text"] if text is None else text
-
     hide = False
     mark = False
     args = text.split(" ")
@@ -43,7 +40,7 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
             hide = True
         if "mark" in args:
             mark = True
-    logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
+    logger.info(f"text: {text}, hide: {hide}, mark: {mark}, origin: {origin}")
 
     tid = re.sub(
         r"tid|Tid|TID", "", text
@@ -143,20 +140,18 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
 
 @inline_handler(r"^(https://(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?((tid|Tid|TID) ?)?\d{13,}(\?.*)?(#.*)?( ?hide ?)?( ?mark ?)?$")
 async def _(update, context, query):
-  text = query.replace("/tid", "")
+  text = query
   results = []
   hide = False
   mark = False
-  count = 0
-
+  origin = False
   args = text.split(" ")
   if len(args) >= 2:
       text = args[0]
-      if "hide" in args:
-          hide = True
-      if "mark" in args:
-          mark = True
-  logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
+      if "hide" in args or '省略' in args: hide = True
+      if "mark" in args or '遮罩' in args: mark = True
+      if 'origin' in args or '原图' in args: origin = True
+  logger.info(f"text: {text}, hide: {hide}, mark: {mark}, origin: {origin}")
 
   tid = re.sub(
       r"((https://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?((tid|Tid|TID) ?)?", "", text
@@ -173,7 +168,7 @@ async def _(update, context, query):
 
   tweet = res["legacy"]
   msg = parseTidMsg(tid, res, hide)
-  
+  count = 0
   if "extended_entities" in tweet.keys():
       medias = tweet["extended_entities"]["media"]
       ms = []
@@ -236,19 +231,17 @@ async def _(update, context, query):
       
   
   countFlag = count > 1
+  btn_text = "获取" + ("遮罩" if mark else "全部") + ("原图" if origin else "图片") + ("(隐藏描述)" if hide else "")
+  start_parameter = f"{tid}_{'hide' if hide else ''}_{'mark' if mark else ''}_{'origin' if origin else ''}"
+  logger.info(f"btn_text: {btn_text}, start: {start_parameter}")
+  button = InlineQueryResultsButton(
+      text=btn_text,
+      start_parameter=start_parameter,
+  ) if countFlag or mark else None
   await update.inline_query.answer(
       results,
       cache_time=10,
-      button=InlineQueryResultsButton(
-          text="获取全部图片" + ("(隐藏信息)" if hide else ""),
-          start_parameter=query.replace(" ", "-"),
-      )
-      if countFlag or mark
-      else None,
-      read_timeout=60,
-      write_timeout=60,
-      connect_timeout=60,
-      pool_timeout=60,
+      button=button,
   )
   
 
