@@ -59,7 +59,7 @@ async def getImg(
     Args:
         url: 图片url，或图片bytes
         proxy: 是否使用代理
-        path: 保存路径， 不填默认为 gocqhttp/data/cache/{md5(url)}.cache
+        path: 保存路径， 不填默认为 data/cache/{md5(url)}.cache
         headers: 指定headers，如 p站图片需要{"Referer": "https://www.pixiv.net"}
         rand: 是否在文件结尾加入随机字符串
 

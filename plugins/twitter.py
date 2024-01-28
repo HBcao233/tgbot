@@ -70,11 +70,8 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         return await update.message.reply_text(res['tombstone']['text']['text'])
     
     tweet = res["legacy"]
-    if not hide:
-        msg = parseTidMsg(tid, res)
-    else:
-        msg = f"https://x.com/i/status/{tid}"
-
+    msg = parseTidMsg(tid, res, hide)
+  
     if "extended_entities" not in tweet.keys():
         return await update.message.reply_text(msg, parse_mode="MarkdownV2")
 
@@ -86,8 +83,9 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     for media in medias:
         if media["type"] == "photo":
             url = media["media_url_https"] + ":orig"
+            img = await util.getImg(url, headers=config.twitter_headers)
             add = InputMediaPhoto(
-                media=url,
+                media=open(img, 'rb'),
                 caption=msg if len(ms) == 0 else None,
                 parse_mode="HTML",
                 has_spoiler=mark,
@@ -101,9 +99,10 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
             )
             variants.sort(key=lambda x: x["bitrate"], reverse=True)
             url = variants[0]["url"]
+            img = await util.getImg(url, headers=config.twitter_headers)
             ms.append(
                 InputMediaVideo(
-                    media=url,
+                    media=open(img, 'rb'),
                     caption=msg if len(ms) == 0 else None,
                     parse_mode="HTML",
                     has_spoiler=mark,
@@ -128,16 +127,14 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         )
     except Exception:
         if flag:
+            logger.warning('ms fail, try ms_a')
             try:
                 await update.message.reply_media_group(
                     media=ms_a, reply_to_message_id=update.message.message_id
                 )
             except Exception:
-                logger.info(msg)
-                logger.info(json.dumps(res))
-                logger.warning(traceback.format_exc())
-                await update.message.reply_text("媒体发送失败")
-        else:
+                flag = False
+        if not flag:
             logger.info(msg)
             logger.info(json.dumps(res))
             logger.warning(traceback.format_exc())
@@ -175,10 +172,7 @@ async def _(update, context, query):
       return await update.inline_query.answer([])
 
   tweet = res["legacy"]
-  if not hide:
-      msg = parseTidMsg(tid, res)
-  else:
-      msg = f"https://x.com/i/status/{tid}"
+  msg = parseTidMsg(tid, res, hide)
   
   if "extended_entities" in tweet.keys():
       medias = tweet["extended_entities"]["media"]
@@ -326,7 +320,7 @@ async def get_twitter(tid):
         return "连接超时"
 
 
-def parseTidMsg(tid, res):
+def parseTidMsg(tid, res, hide=False):
     tweet = res["legacy"]
     user = res["core"]["user_results"]["result"]["legacy"]
 
@@ -343,13 +337,11 @@ def parseTidMsg(tid, res):
 
     user_name = user["name"]
     user_screen_name = user["screen_name"]
-    t = dateutil.parser.parse(
-        tweet["created_at"]) + datetime.timedelta(hours=8)
-    time = t.strftime("%Y年%m月%d日 %H:%M:%S")
-    msg = (
-        f'<a href="https://x.com/{user_screen_name}">{user_name}</a>: \n'
-        f"{full_text}\n\n"
-        f"<a href=\"https://x.com/{user_screen_name}/status/{tid}\">From X at {time}</a>\n"
-    )
+    #t = dateutil.parser.parse(tweet["created_at"]) + datetime.timedelta(hours=8)
+    #time = t.strftime("%Y年%m月%d日 %H:%M:%S")
+    msg = f'<a href="https://x.com/{user_screen_name}">{user_name}</a>'
+    if not hide: msg += f":\n{full_text}"
+    #f"\n\n<a href=\"https://x.com/{user_screen_name}/status/{tid}\">From X at {time}</a>\n"
+    
     return msg
     
