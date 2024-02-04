@@ -51,7 +51,7 @@ async def post(url, proxy=False, headers=None, params=None, data=None, **kwargs)
 
 
 async def getImg(
-    url, proxy=True, cache=True, path=None, headers=None, rand=False, ext=False
+    url, proxy=True, cache=True, path=None, headers=None, rand=False, ext=False, saveas=None
 ) -> str:
     """
     获取下载广义上的图片，可以为任意文件
@@ -61,7 +61,9 @@ async def getImg(
         proxy: 是否使用代理
         path: 保存路径， 不填默认为 data/cache/{md5(url)}.cache
         headers: 指定headers，如 p站图片需要{"Referer": "https://www.pixiv.net"}
-        rand: 是否在文件结尾加入随机字符串
+        rand: 是否在文件结尾加入随机字符串bytes
+        ext: 自动从url中获取文件后缀名
+        saveas: 重命名
 
     Returns:
         str: 图片路径
@@ -97,16 +99,28 @@ async def getImg(
         return path
     else:
         md5 = md5sum(string=url)
-        gopath = f"/data/cache/{md5}.cache"
-        if ext:
-            ex = url.split(".")[-1]
-            ex = re.sub(r"(\?.*)?(#.*)?(:.*)?", "", ex)
-            gopath = f"/data/cache/{md5}.{ex}"
+        if not saveas:
+            gopath = f"/data/cache/{md5}.cache"
+            if ext and '.' in url:
+                ex = url.split(".")[-1]
+                ex = re.sub(r"(\?.*)?(#.*)?(:.*)?", "", ex)
+                gopath = f"/data/cache/{md5}.{ex}"
+        else:
+            if ext:
+              arr = saveas.split('.')
+              ex = url.split(".")[-1]
+              ex = re.sub(r"(\?.*)?(#.*)?(:.*)?", "", ex)
+              if '.' in saveas:
+                arr[-1] = ex
+              else:
+                arr.append(ex)
+              saveas = '.'.join(arr)
+            gopath = f"/data/cache/{saveas}"
         if path is None:
             path = config.botRoot + gopath
         
-        if os.path.isfile(config.botRoot + f"/data/cache/{md5}.png"):
-          path = config.botRoot + f"/data/cache/{md5}.png"
+        if not saveas and os.path.isfile(config.botRoot + f"/data/cache/{md5}.png"):
+            path = config.botRoot + f"/data/cache/{md5}.png"
         
         if not os.path.isfile(path) or not cache:
             r = await get(

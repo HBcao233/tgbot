@@ -92,110 +92,121 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
     count = res["body"]["pageCount"]
     pcount = (count - 1) // 9 + 1
     bot = context.bot
-    for p in range(pcount):
-        await bot.edit_message_text(
-            chat_id=update.message.chat_id,
-            message_id=mid.message_id,
-            text="正在获取 p" +
-            f"{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}",
-        )
-        ms = []
-        i = p * 9
-        while i < min((p + 1) * 9, count):
-            url = imgUrl.replace("_p0", f"_p{i}")
-            try:
-                img = await util.getImg(url, headers=config.pixiv_headers, proxy=True)
-            except Exception:
-                return await update.message.reply_text(
-                    (
-                        f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-                        if min((p + 1) * 9, count) != 1
-                        else ""
-                    ) + "图片获取失败",
-                    reply_to_message_id=update.message.message_id,
-                )
-                
-            caption = (
-                (msg if i == 0 else "")
-                + (
-                    f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-                    if min((p + 1) * 9, count) != 1
-                    else ""
-                )
-                if len(ms) == 0
-                else None
-            )
-            
-            stats = os.stat(img)
-            size_M = stats.st_size // 1024 // 1024
-            if size_M < 5 and not origin:
-                ms.append(
-                    InputMediaPhoto(
-                        media=open(img, "rb"),
-                        caption=caption,
-                        parse_mode="HTML",
-                        has_spoiler=mark,
-                    )
-                )
-            elif size_M < 20:
-                if not origin:
-                    i = 0
-                    origin = True
-                    ms = []
-                    continue
-                portion = os.path.splitext(img)
-                new_img = portion[0] + ".png"
-                os.rename(img, new_img)
-                ms.append(
-                    InputMediaDocument(
-                        media=open(new_img, "rb"),
-                        caption=caption,
-                        parse_mode="HTML",
-                    )
-                )
-            else:
-                return await update.message.reply_text(
-                    (
-                        f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-                        if min((p + 1) * 9, count) != 1
-                        else ""
-                    )
-                    + "图片过大",
-                    reply_to_message_id=update.message.message_id,
-                )
-            i += 1
+    
+    async def _m():
+      nonlocal origin, mid, bot, imgUrl, update, count, pcount
+      ms = []
+      i = p * 9
+      while i < min((p + 1) * 9, count):
+          url = imgUrl.replace("_p0", f"_p{i}")
+          try:
+              img = await util.getImg(url, saveas=f"{pid}_p{i}", ext=True, headers=config.pixiv_headers, proxy=True)
+          except Exception:
+              await update.message.reply_text(
+                  (
+                      f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
+                      if min((p + 1) * 9, count) != 1
+                      else ""
+                  ) + "图片获取失败",
+                  reply_to_message_id=update.message.message_id,
+              )
+              return False
+              
+          caption = (
+              (msg if i == 0 else "")
+              + (
+                  f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
+                  if min((p + 1) * 9, count) != 1
+                  else ""
+              )
+              if len(ms) == 0
+              else None
+          )
+          
+          stats = os.stat(img)
+          size_M = stats.st_size // 1024 // 1024
+          if size_M < 5 and not origin:
+              ms.append(
+                  InputMediaPhoto(
+                      media=open(img, "rb"),
+                      caption=caption,
+                      parse_mode="HTML",
+                      has_spoiler=mark,
+                  )
+              )
+          elif size_M < 20:
+              if not origin:
+                  i = 0
+                  origin = True
+                  ms = []
+                  continue
+              #portion = os.path.splitext(img)
+              #new_img = portion[0] + ".png"
+              #os.rename(img, new_img)
+              ms.append(
+                  InputMediaDocument(
+                      media=open(img, "rb"),
+                      caption=caption,
+                      parse_mode="HTML",
+                  )
+              )
+          else:
+              await update.message.reply_text(
+                  (
+                      f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
+                      if min((p + 1) * 9, count) != 1
+                      else ""
+                  )
+                  + "图片过大",
+                  reply_to_message_id=update.message.message_id,
+              )
+              return False
+          i += 1
 
-        try:
-            await update.message.reply_media_group(
-                media=ms,
-                reply_to_message_id=update.message.message_id,
-                read_timeout=120,
-                write_timeout=120,
-                connect_timeout=120,
-                pool_timeout=120,
-            )
-        except Exception:
-            logger.info(msg)
-            logger.error(traceback.print_exc())
-            await update.message.reply_text(
-                (
-                    f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-                    if min((p + 1) * 9, count) != 1
-                    else ""
-                )
-                + "发送失败",
-                reply_to_message_id=update.message.message_id,
-            )
+      try:
+          await update.message.reply_media_group(
+              media=ms,
+              reply_to_message_id=update.message.message_id,
+              read_timeout=120,
+              write_timeout=120,
+              connect_timeout=120,
+              pool_timeout=120,
+          )
+      except Exception:
+          logger.info(msg)
+          logger.error(traceback.print_exc())
+          if not origin:
+            origin = True
+            return await _m()
+          await update.message.reply_text(
+              (
+                  f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
+                  if min((p + 1) * 9, count) != 1
+                  else ""
+              )
+              + "发送失败",
+              reply_to_message_id=update.message.message_id,
+          )
 
-        await bot.delete_message(
-            chat_id=update.message.chat_id, message_id=mid.message_id
-        )
+      await bot.delete_message(
+          chat_id=update.message.chat_id, message_id=mid.message_id
+      )
+      if p < pcount - 1:
         mid = await update.message.reply_text(
             "请等待...",
             reply_to_message_id=update.message.message_id,
         )
-
-    await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
+      return True
+    for p in range(pcount):
+      await bot.edit_message_text(
+          chat_id=update.message.chat_id,
+          message_id=mid.message_id,
+          text="正在获取 p" +
+          f"{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}",
+      )
+      if not await _m(): return
+      
+    #await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
     keyboard = [
         [
             InlineKeyboardButton("获取原图", callback_data=f"{pid} {'hide' if hide else ''} origin"),
@@ -349,7 +360,7 @@ def parsePidMsg(res, hide=False):
           .replace("<br>", "\n")
           .replace(' target="_blank"', "")
       )
-      if len(comment) > 200:
+      if len(comment) > 400:
           comment = re.sub('<span[^>]*>(((?!</span>).)*)</span>', '\2', comment)
           comment = re.sub('<[^/]+[^<]*(<[^>]*)?$', '', comment[:200])
           comment = re.sub('\n$','',comment)
