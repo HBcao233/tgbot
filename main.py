@@ -134,13 +134,28 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE, text=''):
         "/tid <url/tid>: 获取推文\n"
         "/eid <url>: e站爬取\n"
         "/kid <url>: kemono爬取\n"
-        "/help: 查看本帮助信息\n"
-        "小提示: 以上命令都可以省略 /, 私聊可直接发送url/pid/tid: 自动识别可进行的爬取\n"
-        "附加参数:\n"
-        "hide: 隐藏作品描述\n"
-        "mark/遮罩: 给爬取到的图片添加遮罩\n"
-        "origin/原图: 发送原图",
+        "小提示: 私聊可直接发送url/pid/tid: 自动识别可进行的爬取\n"
+        "/roll [min=0][ -~/][max=9]: 返回一个min~max的随机数（默认0-9）\n",
         reply_markup=reply_markup,
+    )
+    
+    
+@handler('roll')
+async def roll(update, context, text):
+    text = re.sub(r'(\d+)-(\d+)', r'\1 \2', text)
+    arr = list(filter(lambda x: x != '', re.split(r' |/|~', text)))
+    try:
+      _min = int(arr[0])
+    except Exception:
+      _min = 0
+    try:
+      _max = int(arr[1])
+    except Exception:
+      _max = 9
+    import random
+    res = random.randint(_min, _max)
+    return await update.message.reply_text(
+      f'🎲 {res} in {_min} ~ {_max}' 
     )
     
     
