@@ -360,8 +360,8 @@ def parsePidMsg(res, hide=False):
           .replace("<br>", "\n")
           .replace(' target="_blank"', "")
       )
+      comment = re.sub('<span[^>]*>(((?!</span>).)*)</span>', '\2', comment)
       if len(comment) > 400:
-          comment = re.sub('<span[^>]*>(((?!</span>).)*)</span>', '\2', comment)
           comment = re.sub('<[^/]+[^<]*(<[^>]*)?$', '', comment[:200])
           comment = re.sub('\n$','',comment)
           comment = comment + '\n......'

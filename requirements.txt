@@ -1,3 +1,4 @@
 python-telegram-bot[socks]==20.3
 httpx
 nest_asyncio
+ujson
