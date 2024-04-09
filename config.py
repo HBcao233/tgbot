@@ -44,3 +44,5 @@ fanbox_headers = {
     # Fanbox 的 Cookie, 只需要 FANBOXSESSID 字段
     "cookie": "FANBOXSESSID=",
 }
+
+echo_chat_id = 0
