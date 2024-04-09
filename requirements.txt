@@ -1,4 +1,5 @@
 python-telegram-bot[socks]==20.3
+python-telegram-bot[job-queue]
 httpx
 nest_asyncio
 ujson

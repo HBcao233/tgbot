@@ -52,7 +52,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) 
 
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    #print(update.message)
+    logger.info(update.message)
     bot = context.bot
 
     if update.message and update.message.chat.type != "private":
@@ -60,30 +60,79 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
       
     message = update.message
     logger.info(message)
+    if message.media_group_id:
+      if not context.bot_data.get('media_group', None): context.bot_data['media_group'] = {}
+      if not context.bot_data['media_group'].get(message.media_group_id, None): 
+        context.bot_data['media_group'][message.media_group_id] = []
+        context.job_queue.run_once(echo_timer, 1, data=message.media_group_id)
+      context.bot_data['media_group'][message.media_group_id].append(message)
+      return
+
     if message.photo:
-        res = await bot.getFile(file_id=message.photo[-1].file_id)
         await message.reply_text(
-            f'<code>{message.photo[-1].file_id}</code>\n' + 
-            re.sub('api.telegram.org/file/[^/]+/', 'tgapi.hbcao.top/', res.file_path), 
+            f'<code>p_{message.photo[-1].file_id}</code>', 
             reply_to_message_id=update.message.message_id,
             parse_mode='HTML',
         )
     if message.video:
-        try:
-            res = await bot.getFile(file_id=message.video.file_id)
-            await message.reply_text(
-                f'<code>{message.video.file_id}</code>\n' + 
-                re.sub('api.telegram.org/file/[^/]+/', 'tgapi.hbcao.top/', res.file_path), 
-                reply_to_message_id=update.message.message_id,
-                parse_mode='HTML',
-            )
-        except Exception:
-            logger.error(traceback.print_exc())
-            await message.reply_text(
-                f'<code>{message.video.file_id}</code>', 
-                reply_to_message_id=update.message.message_id,
-                parse_mode='HTML',
-            )
+        await message.reply_text(
+            f'<code>vi_{message.video.file_id}</code>', 
+            reply_to_message_id=update.message.message_id,
+            parse_mode='HTML',
+        )
+    if message.document:
+        await message.reply_text(
+            f'<code>d_{message.document.file_id}</code>', 
+            reply_to_message_id=update.message.message_id,
+            parse_mode='HTML',
+        )
+    if message.audio:
+        await message.reply_text(
+            f'<code>au_{message.audio.file_id}</code>', 
+            reply_to_message_id=update.message.message_id,
+            parse_mode='HTML',
+        )
+
+async def echo_timer(context):
+  # logger.info(context.job.data)
+  ms = context.bot_data.get('media_group', {}).get(context.job.data, [])
+  res = []
+  for m in ms:
+    if m.photo:
+      res.append("p_" + m.photo[-1].file_id)
+    elif m.video:
+      res.append("vi_" + m.video.file_id)
+  res = list(map(lambda x : "<code>" + x + "</code>", res))
+  await context.bot.sendMessage(
+      chat_id=ms[0].chat.id,
+      text="\n".join(res), 
+      reply_to_message_id=ms[0].message_id,
+      parse_mode='HTML',
+  )
+  if 'media_group' in context.bot_data.keys() and context.job.data in context.bot_data['media_group'].keys():
+    del context.bot_data['media_group'][context.job.data]
+
+
+_file_pattern = r"(?:(vi_|p_|d_|au_)([a-zA-Z0-9-]+))"
+@handler("file", private_pattern=_file_pattern)
+async def file(update, context, text):
+    bot = context.bot
+    r = re.findall(_file_pattern, text)
+    # r = list(map(lambda x: list(filter(lambda y: y!='', x)), r))
+    # logger.info(r)
+
+    for i in r:
+      try:
+        if i[0] == 'p_':
+          await bot.sendPhoto(chat_id=update.message.chat_id, photo=i[1])
+        elif i[0] == 'vi_':
+          await bot.sendVideo(chat_id=update.message.chat_id, video=i[1])
+        elif i[0] == 'd_':
+          await bot.sendDocument(chat_id=update.message.chat_id, document=i[1])
+        elif i[0] == 'au_':
+          await bot.sendAudio(chat_id=update.message.chat_id, audio=i[1])
+      except Exception:
+        logger.error(traceback.print_exc())
 
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -179,7 +228,7 @@ if __name__ == "__main__":
   for i in config.commands:
     app.add_handler(CommandHandler(i.cmd, i.func))
   
-  app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO, echo))
+  app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL | filters.AUDIO, echo))
   app.add_handler(MessageHandler(filters.TEXT, handle))
   app.add_handler(InlineQueryHandler(inline_query))
   app.add_handler(CallbackQueryHandler(button))
