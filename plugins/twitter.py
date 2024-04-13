@@ -96,7 +96,8 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
             )
             variants.sort(key=lambda x: x["bitrate"], reverse=True)
             url = variants[0]["url"]
-            img = await util.getImg(url, headers=config.twitter_headers)
+            md5 = util.md5sum(string=url)
+            img = await util.getImg(url, headers=config.twitter_headers, saveas=f"{md5}.mp4")
             ms.append(
                 InputMediaVideo(
                     media=open(img, 'rb'),
