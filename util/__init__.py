@@ -14,44 +14,52 @@ from util.log import logger
 
 
 async def request(
-    method, url, params=None, data=None, proxy=False, headers=None, **kwargs
+    method, url, *, params=None, data=None, proxy=False, headers=None, **kwargs
 ):
     p = urllib.parse.urlparse(url)
     _headers = {
        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",
-       'Referer': p.scheme + '://' + p.netloc + '/'
+       'Referer': p.scheme + '://' + p.netloc + '/',
+       'host': p.netloc,
     }
     headers = dict(_headers, **headers) if headers else None
     client = httpx.AsyncClient(
-        proxies=config.proxies if proxy else None, verify=False)
-    r = await client.request(
-        method, url=url, headers=headers, data=data, params=params, **kwargs
+        proxies=config.proxies if proxy else None, 
+        verify=False
     )
+    # logger.info(headers)
+    
+    r = await client.request(
+      method, url=url, headers=headers, data=data, params=params, **kwargs
+    )
+    
     if r.status_code == 302:
       url = r.headers['Location']
       if 'http' not in url: url = p.scheme + '://' + p.netloc + '/' + url
       r = await client.request(
         method, url=url, headers=headers, data=data, params=params, **kwargs
       )
-    logger.info(f"{method} {url} code: {r.status_code}")
+    if params is None: params = dict()
+    query = urllib.parse.urlencode(params)
+    logger.info(f"{method} {url}?{query} code: {r.status_code}")
     await client.aclose()
     return r
 
 
-async def get(url, proxy=False, headers=None, params=None, data=None, **kwargs):
+async def get(url, *, proxy=False, headers=None, params=None, data=None, **kwargs):
     return await request(
         "GET", url, params=params, data=data, proxy=proxy, headers=headers, **kwargs
     )
 
 
-async def post(url, proxy=False, headers=None, params=None, data=None, **kwargs):
+async def post(url, *, proxy=False, headers=None, params=None, data=None, **kwargs):
     return await request(
         "POST", url, params=params, data=data, proxy=proxy, headers=headers, **kwargs
     )
 
 
 async def getImg(
-    url, proxy=True, cache=True, path=None, headers=None, rand=False, ext=False, saveas=None
+    url, *, proxy=True, cache=True, path=None, headers=None, rand=False, ext=False, saveas=None, **kwargs
 ) -> str:
     """
     获取下载广义上的图片，可以为任意文件
@@ -123,15 +131,23 @@ async def getImg(
             path = config.botRoot + f"/data/cache/{md5}.png"
         
         if not os.path.isfile(path) or not cache:
-            r = await get(
-                url,
-                headers=headers,
-                proxy=proxy,
-                timeout=httpx.Timeout(
-                    timeout=60, connect=60, read=60, write=60),
-            )
-            with open(path, "wb") as f:
-                f.write(r.content)
+            p = urllib.parse.urlparse(url)
+            _headers = {
+               "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",
+               'Referer': p.scheme + '://' + p.netloc + '/',
+               'host': p.netloc,
+            }
+            headers = dict(_headers, **headers) if headers else None
+            async with httpx.AsyncClient(
+              proxies=config.proxies if proxy else None, 
+              verify=False
+            ) as client:
+              async with client.stream(
+                'GET', url=url, headers=headers,
+              ) as r:
+                with open(path, "wb") as f:
+                  async for chunk in r.aiter_bytes():
+                    f.write(chunk)
 
             if rand:
                 with open(path, "ab") as f:
@@ -159,7 +175,7 @@ def randStr(length: int = 8) -> str:
 
 
 def md5sum(
-    *, string: Union[str, bytes] = None, byte: bytes = None, file_path: str = None
+    string: Union[str, bytes] = None, byte: bytes = None, file_path: str = None
 ) -> str:
     """
     计算字符串或文件的 md5 值

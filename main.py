@@ -9,6 +9,7 @@ from telegram import (
     ReplyParameters,
     InputMediaPhoto,
     InputMediaVideo,
+    BotCommand,
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -191,7 +192,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     await handle(update, context, text)
 
 
-@handler('help')
+@handler('help', info='介绍与帮助')
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE, text=''):
     keyboard = [
         [
@@ -212,7 +213,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE, text=''):
     )
     
     
-@handler('roll')
+@handler('roll', info="生成随机数 /roll [min=0] [max=9]")
 async def roll(update, context, text):
     text = re.sub(r'(\d+)-(\d+)', r'\1 \2', text)
     arr = list(filter(lambda x: x != '', re.split(r' |/|~', text)))
@@ -234,6 +235,22 @@ async def roll(update, context, text):
 async def main(app):
     bot: telegram.Bot = app.bot
     config.bot = await bot.get_me()
+    app.add_error_handler(error_handler)
+  
+    load_plugins('plugins')
+    for i in config.commands:
+      app.add_handler(CommandHandler(i.cmd, i.func))
+    
+    app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL | filters.AUDIO, echo))
+    app.add_handler(MessageHandler(filters.TEXT, handle))
+    app.add_handler(InlineQueryHandler(inline_query))
+    app.add_handler(CallbackQueryHandler(button))
+  
+    commands = []
+    for i in config.commands:
+      if i.info != "":
+        commands.append(BotCommand(i.cmd, i.info))
+    await bot.set_my_commands(commands)
     
     
 if __name__ == "__main__":
@@ -242,18 +259,9 @@ if __name__ == "__main__":
       .token(config.token)
       .proxy(config.proxy_url)
       .get_updates_proxy(config.proxy_url)
+      .base_url(config.base_url)
+      .base_file_url(config.base_file_url)
       .build()
   )
   asyncio.run(main(app))
-  app.add_error_handler(error_handler)
-  
-  load_plugins('plugins')
-  for i in config.commands:
-    app.add_handler(CommandHandler(i.cmd, i.func))
-  
-  app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL | filters.AUDIO, echo))
-  app.add_handler(MessageHandler(filters.TEXT, handle))
-  app.add_handler(InlineQueryHandler(inline_query))
-  app.add_handler(CallbackQueryHandler(button))
-
   app.run_polling()  # 启动Bot

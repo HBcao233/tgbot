@@ -31,6 +31,7 @@ from plugin import handler, inline_handler, button_handler
                   r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12})",
   pattern=r"(^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
         r"(^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12})",
+  info="获取p站作品 /pid <url/pid> [hide] [mark]"
 )
 async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
     hide = False
@@ -125,7 +126,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
           
           stats = os.stat(img)
           size_M = stats.st_size // 1024 // 1024
-          if size_M < 5 and not origin:
+          if not origin:
               ms.append(
                   InputMediaPhoto(
                       media=open(img, "rb"),
@@ -134,7 +135,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
                       has_spoiler=mark,
                   )
               )
-          elif size_M < 20:
+          else:
               if not origin:
                   i = 0
                   origin = True
@@ -150,6 +151,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
                       parse_mode="HTML",
                   )
               )
+          '''
           else:
               await update.message.reply_text(
                   (
@@ -160,7 +162,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
                   + "图片过大",
                   reply_to_message_id=update.message.message_id,
               )
-              return False
+              return False'''
           i += 1
 
       try:

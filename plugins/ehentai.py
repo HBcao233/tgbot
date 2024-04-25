@@ -18,7 +18,8 @@ from plugin import handler
 
 @handler('eid',
   private_pattern=r"https?://e[x-]hentai.org/[sg]/.*",
-  pattern=r"eid https?://e[x-]hentai.org/[sg]/.*"
+  pattern=r"eid https?://e[x-]hentai.org/[sg]/.*",
+  info="e站爬取 /eid <url> [hide] [mark]"
 )
 async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     text: str = update.message["text"] if text is None else text

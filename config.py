@@ -15,11 +15,15 @@ proxies = {
     # "https://": f"http://127.0.0.1:10809/"
 }
 
+# 使用自建 API 服务器，可提高文件上传下载大小限制
+# 可参考教程 https://www.kuku.me/archives/41/
+# docker: https://hub.docker.com/r/aiogram/telegram-bot-api/tags
+base_url = 'https://api.telegram.org/bot' # http://0.0.0.0:8081/bot
+base_file_url = 'https://api.telegram.org/file/bot' # http://0.0.0.0:8081/file/bot
+
 pixiv_headers = {
-    "Referer": "https://www.pixiv.net",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",
-    # Pixiv 的 Cookie, 只需要 PHPSESSID 字段
-    "cookie": "PHPSESSID=",
+  # Pixiv 的 Cookie, 只需要 PHPSESSID 字段
+  "cookie": "PHPSESSID=",
 }
 
 twitter_headers = {
@@ -40,9 +44,13 @@ ex_headers = {
 }
 
 fanbox_headers = {
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",
     # Fanbox 的 Cookie, 只需要 FANBOXSESSID 字段
     "cookie": "FANBOXSESSID=",
 }
 
 echo_chat_id = 0
+
+bili_headers = {
+  # cookie, 只需要 SESSDATA 字段
+  'cookie': 'SESSDATA='
+}

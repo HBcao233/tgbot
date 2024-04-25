@@ -5,6 +5,8 @@
 # site: https://www.hbcao.top
 project="tgbot";
 root="/www/wwwroot/"${project};
+command=("python3 ${root}/main.py");
+k=${command[0]}
 
 start(){
     echo '启动中...'
@@ -18,12 +20,11 @@ status(){
     pid=(0 0);
     since=("" "");
     ago=("" "");
-    command=("python3 ${root}/main.py");
-
-    count=`ps -ax | grep ${project} | grep -v grep | grep -v bin | wc -l`;
+    
+    count=`ps -ax | grep "$k" | grep -v grep | grep -v bin | wc -l`;
     if [[ $count -ne 0 ]];then
       status[i]=1;
-      pid[i]=`ps -ax  | grep ${project} | grep -v grep | awk -F " " 'NR==1{print $1}'`;
+      pid[i]=`ps -ax  | grep "$k" | grep -v grep | awk -F " " 'NR==1{print $1}'`;
       since[i]=`ps -o lstart -p ${pid[i]} | awk 'NR==2'`;
       ago[i]=`ps -o etime -p ${pid[i]} | awk 'NR==2{print $1}'`;
     fi
@@ -38,16 +39,11 @@ status(){
 }
 
 stop(){
-    i=${project}/${item[0]}
-    count=`ps -ax | grep $i | grep -v grep | grep -v bin | grep -v sh | wc -l`;
+    count=`ps -ax | grep "$k" | grep -v grep | grep -v bin | grep -v sh | wc -l`;
     if [[ $count -ne 0 ]];then
-        echo $i'已启动，正在关闭...';
-        ps -ax  | grep $i | grep -v grep | grep -v bin | grep -v sh | awk -F " " '{print $1}' | xargs -I {} kill {}
+        echo $project'已启动，正在关闭...';
+        ps -ax  | grep "$k" | grep -v grep | grep -v bin | grep -v sh | awk -F " " '{print $1}' | xargs -I {} kill {}
     fi
-}
-
-set_command(){
-  python3 ${root}/set_commands.py
 }
 
 
@@ -74,12 +70,6 @@ log)
     nl ${root}/bot.log | tail -n 100
   fi
   ;;
-set_command)
-  set_command
-  ;;
-set)
-  set_command
-  ;;
 test)
   curl --socks5 127.0.0.1:10808 https://www.pixiv.net
   ;;
@@ -87,6 +77,8 @@ cd)
   cd ${root}
   ;;
 *)
-  echo "Usage: $0 {start|restart|stop|status|golog|botlog|test}"
+  echo "Usage: $0 {start|restart|stop|status|botlog|test}"
   exit 1
 esac
+
+exit 0

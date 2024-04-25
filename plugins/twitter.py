@@ -29,6 +29,7 @@ from plugin import handler, inline_handler
 @handler('tid',
   private_pattern=r"^((https?://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?\d{13,}(.*)$",
   pattern=r"^((tid|Tid|TID) ?)((https?://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?\d{13,}(.*)$",
+  info="获取推文 /tid <url/tid> [hide] [mark]"
 )
 async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     hide = False

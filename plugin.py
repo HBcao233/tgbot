@@ -6,11 +6,13 @@ from util.log import logger
 
 
 class Command:
-  def __init__(self, cmd, func, pattern=None, private_pattern=None):
+  def __init__(self, cmd, func, *, pattern=None, private_pattern=None, info="", desc=""):
     self.cmd = cmd
     self.func = self(func)
     self.pattern = pattern
     self.private_pattern = private_pattern
+    self.info = info
+    self.desc = desc
   
   def __str__(self):
     res = f'Command(cmd={self.cmd}, func={self.func}'
