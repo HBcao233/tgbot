@@ -7,7 +7,7 @@ buttons = []
 
 # Telegram Bot Token
 token = ""
-# 机器人的代理
+# 机器人的代理 
 proxy_url = None  # http://127.0.0.1:10809/
 # get, post 的代理
 proxies = {
@@ -15,6 +15,7 @@ proxies = {
     # "https://": f"http://127.0.0.1:10809/"
 }
 
+# use local Telegram Bot API
 # 使用自建 API 服务器，可提高文件上传下载大小限制
 # 可参考教程 https://www.kuku.me/archives/41/
 # docker: https://hub.docker.com/r/aiogram/telegram-bot-api/tags
