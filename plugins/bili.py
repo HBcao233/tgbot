@@ -31,7 +31,7 @@ from util.log import logger
 from plugin import handler, inline_handler, button_handler
 
 
-_pattern = r"(?:bill ?)?(?:(?:https?://)?(?:www\.)?(?:bilibili\.com/?video/|b23.tv))?(av\d{1,11}|BV[0-9a-zA-Z]{8,12}|[0-9a-zA-Z]{7,7})/?"
+_pattern = r"(?:^|bilibili\.com/video/)(av\d{1,11}|BV[0-9a-zA-Z]{8,12})|(?:b23\.tv/((?![0-9]{7,7})[0-9a-zA-Z]{7,7}))"
 @handler('bili', 
   private_pattern=_pattern,
   info="av号或bv号获取视频"
@@ -52,11 +52,11 @@ async def _(update, context, text):
     reply_to_message_id=message.message_id,
   )
   
-  g = re.search(_pattern, text).group(1)
-  if 'b23.tv' in text:
-    r = httpx.get('https://b23.tv/'+ g, headers=config.bili_headers, follow_redirects=True)
+  match = re.search(_pattern, text)
+  if match.group(2):
+    r = httpx.get('https://b23.tv/'+ match.group(2), headers=config.bili_headers, follow_redirects=True)
     text = str(r.url).split('?')[0]
-    g = re.match(_pattern, text).group(1)
+    match = re.match(_pattern, text)
     await bot.delete_message(chat_id=message.chat.id, message_id=m.message_id)
     await bot.send_message(
       text=text, 
@@ -69,6 +69,7 @@ async def _(update, context, text):
       reply_to_message_id=message.message_id,
     )
     
+  g = match.group(1)
   aid = ''
   bvid = ''
   if 'av' in g:

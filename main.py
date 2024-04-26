@@ -66,7 +66,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
     logger.info(message)
     
-    if message.media_group_id:
+    if getattr(message, 'media_group_id', None):
       if not context.bot_data.get('media_group', None): context.bot_data['media_group'] = {}
       if not context.bot_data['media_group'].get(message.media_group_id, None): 
         context.bot_data['media_group'][message.media_group_id] = []
@@ -232,28 +232,7 @@ async def roll(update, context, text):
     )
     
     
-async def main(app):
-    bot: telegram.Bot = app.bot
-    config.bot = await bot.get_me()
-    app.add_error_handler(error_handler)
-  
-    load_plugins('plugins')
-    for i in config.commands:
-      app.add_handler(CommandHandler(i.cmd, i.func))
-    
-    app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL | filters.AUDIO, echo))
-    app.add_handler(MessageHandler(filters.TEXT, handle))
-    app.add_handler(InlineQueryHandler(inline_query))
-    app.add_handler(CallbackQueryHandler(button))
-  
-    commands = []
-    for i in config.commands:
-      if i.info != "":
-        commands.append(BotCommand(i.cmd, i.info))
-    await bot.set_my_commands(commands)
-    
-    
-if __name__ == "__main__":
+async def main():
   app = (
       ApplicationBuilder()
       .token(config.token)
@@ -263,5 +242,27 @@ if __name__ == "__main__":
       .base_file_url(config.base_file_url)
       .build()
   )
-  asyncio.run(main(app))
+  bot: telegram.Bot = app.bot
+  config.bot = await bot.get_me()
+  app.add_error_handler(error_handler)
+
+  load_plugins('plugins')
+  for i in config.commands:
+    app.add_handler(CommandHandler(i.cmd, i.func))
+  
+  app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL | filters.AUDIO, echo))
+  app.add_handler(MessageHandler(filters.TEXT, handle))
+  app.add_handler(InlineQueryHandler(inline_query))
+  app.add_handler(CallbackQueryHandler(button))
+
+  commands = []
+  for i in config.commands:
+    if i.info != "":
+      commands.append(BotCommand(i.cmd, i.info))
+  await bot.set_my_commands(commands)
+  
   app.run_polling()  # 启动Bot
+    
+    
+if __name__ == "__main__":
+  asyncio.run(main())

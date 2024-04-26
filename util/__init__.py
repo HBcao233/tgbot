@@ -33,15 +33,21 @@ async def request(
       method, url=url, headers=headers, data=data, params=params, **kwargs
     )
     
+    if params is None: params = dict()
+    if type(params) == dict: params = urllib.parse.urlencode(params)
+    params = params.strip()
+    if params != '':
+      if '?' in url:
+        url = '&' + params
+      else:
+        url = '?' + params
     if r.status_code == 302:
       url = r.headers['Location']
       if 'http' not in url: url = p.scheme + '://' + p.netloc + '/' + url
       r = await client.request(
-        method, url=url, headers=headers, data=data, params=params, **kwargs
+        method, url=url, headers=headers, data=data, **kwargs
       )
-    if params is None: params = dict()
-    query = urllib.parse.urlencode(params)
-    logger.info(f"{method} {url}?{query} code: {r.status_code}")
+    logger.info(f"{method} {url} code: {r.status_code}")
     await client.aclose()
     return r
 
