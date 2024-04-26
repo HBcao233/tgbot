@@ -80,5 +80,3 @@ cd)
   echo "Usage: $0 {start|restart|stop|status|botlog|test}"
   exit 1
 esac
-
-exit 0
