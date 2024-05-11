@@ -19,11 +19,13 @@ from plugin import handler, inline_handler
   private_pattern=r"^roll ?(?:([-\d]+([ \/\~\-]+[-\d]+)?)|[ \/\~\-]+[-\d]+)?$",
 )
 async def roll(update, context, text, _min=None, _max=None):
+    f = 0
     if _min is None or _max is None:
       _min, _max = getMinMax(text)
+      f = 1
     res = random.randint(_min, _max)
     msg = f'🎲 骰到了 {res} (在 {_min} ~ {_max} 中)' 
-    if _min is None or _max is None:
+    if f:
       return await update.message.reply_text(msg)
     else: 
       return msg
