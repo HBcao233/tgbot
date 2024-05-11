@@ -76,73 +76,74 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     # 格式化媒体
     medias = tweet["extended_entities"]["media"]
     ms = []
-    ms_a = []  # 备用
-    flag = False
+    md5s = []
+    videos = util.getData('videos')
     for media in medias:
-        if media["type"] == "photo":
-            url = media["media_url_https"] + ":orig"
-            img = await util.getImg(url, headers=config.twitter_headers)
-            add = InputMediaPhoto(
-                media=open(img, 'rb'),
-                caption=msg if len(ms) == 0 else None,
-                parse_mode="HTML",
-                has_spoiler=mark,
-            )
-            ms.append(add)
-            ms_a.append(add)
-        else:
-            variants = media["video_info"]["variants"]
-            variants = list(
-                filter(lambda x: x["content_type"] == "video/mp4", variants)
-            )
-            variants.sort(key=lambda x: x["bitrate"], reverse=True)
-            url = variants[0]["url"]
-            md5 = util.md5sum(string=url)
-            img = await util.getImg(url, headers=config.twitter_headers, saveas=f"{md5}.mp4")
-            ms.append(
-                InputMediaVideo(
-                    media=open(img, 'rb'),
-                    caption=msg if len(ms) == 0 else None,
-                    parse_mode="HTML",
-                    has_spoiler=mark,
-                )
-            )
-            if len(variants) >= 2:
-                flag = True
-                url = variants[1]["url"]
-                ms_a.append(
-                    InputMediaVideo(
-                        media=url,
-                        caption=msg if len(ms_a) == 0 else None,
-                        parse_mode="HTML",
-                        has_spoiler=mark,
-                    )
-                )
+      if media["type"] == "photo":
+        url = media["media_url_https"] + ":orig"
+        md5 = util.md5sum(url)
+        md5s.append(md5)
+        img = await util.getImg(
+          url, 
+          headers=config.twitter_headers,
+          saveas=f"{md5}.png"
+        )
+        photo = open(img, 'rb')
+        add = InputMediaPhoto(
+          media=photo,
+          caption=msg if len(ms) == 0 else None,
+          parse_mode="HTML",
+          has_spoiler=mark,
+        )
+        ms.append(add)
+      else:
+        variants = media["video_info"]["variants"]
+        variants = list(
+            filter(lambda x: x["content_type"] == "video/mp4", variants)
+        )
+        variants.sort(key=lambda x: x["bitrate"], reverse=True)
+        url = variants[0]["url"]
+        if len(variants) >= 2: url = variants[1]["url"]
+        md5 = util.md5sum(url)
+        md5s.append(md5)
+        if not (video := videos.get(md5, None)):
+          img = await util.getImg(url, headers=config.twitter_headers, saveas=f"{md5}.mp4")
+          video = open(img, 'rb')
+        add = InputMediaVideo(
+          media=video,
+          caption=msg if len(ms) == 0 else None,
+          parse_mode="HTML",
+          has_spoiler=mark,
+        )
+        ms.append(add)
 
     # 发送
     try:
-        await update.message.reply_media_group(
-            media=ms, reply_to_message_id=update.message.message_id
-        )
+      m = await update.message.reply_media_group(
+        media=ms, 
+        reply_to_message_id=update.message.message_id,
+        read_timeout=60,
+        write_timeout=60,
+        connect_timeout=60,
+        pool_timeout=60,
+      )
+      for i, ai in enumerate(m):
+        #if getattr(ai, 'photo', None) and not photos.get(md5s[i], None):
+        #  photos[md5s[i]] = ai.photo[-1].file_id
+        
+        if getattr(ai, 'video', None) and not videos.get(md5s[i], None):
+          videos[md5s[i]] = ai.video.file_id
+      # util.setData('photos', photos)
+      util.setData('videos', videos)
     except Exception:
-        if flag:
-            logger.warning('ms fail, try ms_a')
-            try:
-                await update.message.reply_media_group(
-                    media=ms_a, reply_to_message_id=update.message.message_id
-                )
-            except Exception:
-                flag = False
-        if not flag:
-            logger.info(msg)
-            logger.info(json.dumps(res))
-            logger.warning(traceback.format_exc())
-            await update.message.reply_text("媒体发送失败")
+      logger.info(msg)
+      logger.info(json.dumps(res))
+      logger.warning(traceback.format_exc())
+      await update.message.reply_text("媒体发送失败")
 
 
 @inline_handler(r"^(https://(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?((tid|Tid|TID) ?)?\d{13,}(\?.*)?(#.*)?( ?hide ?)?( ?mark ?)?$")
-async def _(update, context, query):
-  text = query
+async def _(update, context, text):
   results = []
   hide = False
   mark = False

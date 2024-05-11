@@ -38,12 +38,14 @@ class Command:
 
 
 class Inline:
-  def __init__(self, func, pattern):
+  def __init__(self, func, pattern, *, block=True):
     self.func = func
     self.pattern = pattern
+    self.block = block
     
   def __str__(self):
     return f'Inline_Handler(func={self.func})'
+
 
 class Button:
   def __init__(self, func, pattern):
@@ -61,9 +63,9 @@ def handler(cmd, **kwargs):
     return deco
     
     
-def inline_handler(pattern):
+def inline_handler(pattern, **kwargs):
   def deco(func):
-    config.inlines.append(Inline(func, pattern))
+    config.inlines.append(Inline(func, pattern, **kwargs))
     return func
   return deco
     

@@ -117,7 +117,7 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
               (msg if i == 0 else "")
               + (
                   f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-                  if min((p + 1) * 9, count) != 1
+                  if min((p + 1) * 9, count) > 9
                   else ""
               )
               if len(ms) == 0
@@ -209,16 +209,18 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
       if not await _m(): return
       
     #await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
-    keyboard = [
-        [
-            InlineKeyboardButton("获取原图", callback_data=f"{pid} {'hide' if hide else ''} origin"),
-        ],
-    ]
+    keyboard = [[]]
+    if not origin:
+      keyboard[0].append(InlineKeyboardButton("获取原图", callback_data=f"{pid} {'hide' if hide else ''} origin"))
+    
+    keyboard[0].append(
+      InlineKeyboardButton("详细描述" if hide else "简略描述", callback_data=f"{pid} {'hide' if not hide else ''} {'origin' if origin else ''}")
+    )
     reply_markup = InlineKeyboardMarkup(keyboard)
     mid = await update.message.reply_text(
         "获取完成", 
         reply_to_message_id=update.message.message_id,
-        reply_markup=reply_markup if not origin else None,
+        reply_markup=reply_markup,
     )
     #await asyncio.sleep(1)
     #await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)

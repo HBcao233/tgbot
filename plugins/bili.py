@@ -24,6 +24,7 @@ import time
 import urllib.parse
 import hashlib
 import httpx
+import ujson as json
 
 import config
 import util
@@ -56,7 +57,7 @@ async def _(update, context, text):
   if match.group(2):
     r = httpx.get('https://b23.tv/'+ match.group(2), headers=config.bili_headers, follow_redirects=True)
     text = str(r.url).split('?')[0]
-    match = re.match(_pattern, text)
+    match = re.search(_pattern, text)
     await bot.delete_message(chat_id=message.chat.id, message_id=m.message_id)
     await bot.send_message(
       text=text, 
@@ -108,32 +109,37 @@ async def _(update, context, text):
   )
   
   try:
-    mixin_key = await getMixinKey()
-    url = 'https://api.bilibili.com/x/player/wbi/playurl'
-    r1 = await util.get(
-      url,
-      headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
-      params=wbi(mixin_key, {
-        'fnver': 0,
-        'fnval': 1,
-        'qn': 64,
-        'avid': aid,
-        'cid': res['cid'],
-      })
-    )
-    logger.info(r1.text)
-    res1 = r1.json()['data']
-    url = res1['durl'][0]['url']
-    md5 = util.md5sum(string=url)
-    img = await util.getImg(
-      url,
-      headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
-      saveas=f"{md5}.mp4",
-      params=wbi(mixin_key),
-    )
+    data = util.getData('videos')
+    logger.info(data)
+    logger.info(f'bvid: {bvid} video: '+str(data.get(bvid, None)))
+    if not (video := data.get(bvid, None)):
+      mixin_key = await getMixinKey()
+      url = 'https://api.bilibili.com/x/player/wbi/playurl'
+      r1 = await util.get(
+        url,
+        headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
+        params=wbi(mixin_key, {
+          'fnver': 0,
+          'fnval': 1,
+          'qn': 64,
+          'avid': aid,
+          'cid': res['cid'],
+        })
+      )
+      logger.info(r1.text)
+      res1 = r1.json()['data']
+      url = res1['durl'][0]['url']
+      md5 = util.md5sum(string=url)
+      img = await util.getImg(
+        url,
+        headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
+        saveas=f"{md5}.mp4",
+        params=wbi(mixin_key),
+      )
+      video = open(img, 'rb')
     
-    await bot.send_video(
-      video=open(img, 'rb'),
+    m1 = await bot.send_video(
+      video=video,
       caption=msg, 
       chat_id=message.chat.id,
       reply_to_message_id=message.message_id,
@@ -143,6 +149,9 @@ async def _(update, context, text):
       connect_timeout=60,
       pool_timeout=60,
     )
+    if not data.get(bvid, None):
+      data[bvid] = m1.video.file_id
+      util.setData('videos', data)
   except Exception:
     logger.error(traceback.print_exc())
     await bot.send_message(

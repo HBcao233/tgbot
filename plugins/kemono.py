@@ -14,6 +14,7 @@ from telegram.ext import ContextTypes
 from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from uuid import uuid4
+import httpx
 
 import config
 import util
@@ -53,7 +54,7 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     mid = await update.message.reply_text(
         "请等待...", reply_to_message_id=update.message.message_id
     )
-    r = await util.get(kid, proxy=True, timeout=60)
+    r = await util.get(kid)
     try:
       msg, files, other = parseKidMsg(kid, r.text, hide)
     except Exception as e:
@@ -80,10 +81,18 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         i = p * piece
         while i < min((p + 1) * piece, count):
             file = files[i]
+            url = file["url"] if origin else file['thumbnail']
             try:
-                img = await util.getImg(file["url"], proxy=True)
+              img = await util.getImg(
+                url, 
+                timeout=httpx.Timeout(
+                  timeout=60, connect=60, 
+                  read=60, write=60
+                ),
+              )
             except Exception:
-                return await update.message.reply_text("文件获取失败")
+              logger.error(traceback.print_exc())
+              return await update.message.reply_text("文件获取失败")
                 
             caption = ''
             if p == 0 and len(ms) == 0:
@@ -95,9 +104,9 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
                     else ""
                 )
                 
-            stats = os.stat(img)
-            size_M = stats.st_size // 1024 // 1024
-            if size_M < 5 and not origin:
+            #stats = os.stat(img)
+            #size_M = stats.st_size // 1024 // 1024
+            if not origin:
               ms.append(
                   InputMediaPhoto(
                       media=open(img, "rb"),
@@ -106,12 +115,7 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
                       has_spoiler=mark,
                   )
               )
-            elif size_M < 20:
-                if not origin:
-                    i = 0
-                    origin = True
-                    ms = []
-                    continue
+            else:
                 portion = os.path.splitext(img)
                 new_img = portion[0] + ".png"
                 os.rename(img, new_img)
@@ -121,16 +125,6 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
                         caption=caption,
                         parse_mode="HTML",
                     )
-                )
-            else:
-                return await update.message.reply_text(
-                    (
-                        f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-                        if min((p + 1) * 9, count) != 1
-                        else ""
-                    )
-                    + "图片过大",
-                    reply_to_message_id=update.message.message_id,
                 )
             i += 1
 

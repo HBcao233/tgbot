@@ -38,9 +38,9 @@ async def request(
     params = params.strip()
     if params != '':
       if '?' in url:
-        url = '&' + params
+        url += '&' + params
       else:
-        url = '?' + params
+        url += '?' + params
     if r.status_code == 302:
       url = r.headers['Location']
       if 'http' not in url: url = p.scheme + '://' + p.netloc + '/' + url
@@ -205,3 +205,19 @@ def md5sum(
             data = fp.read()
         return hashlib.md5(data).hexdigest()
     return ""
+
+
+def getData(file: str) -> dict:
+  path = config.botRoot+f'/data/{file}.json'
+  if not os.path.isfile(path):
+    setData(file, dict())
+  with open(path, 'r') as f:
+    data = f.read()
+    if data == '': data = '{}'
+    data = json.loads(data)
+    return data
+    
+def setData(file: str, data: dict):
+  with open(config.botRoot+f'/data/{file}.json', 'w') as f:
+    f.write(json.dumps(data))
+    
