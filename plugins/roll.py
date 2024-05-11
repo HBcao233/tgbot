@@ -16,7 +16,7 @@ from plugin import handler, inline_handler
 @handler(
   'roll', 
   info="生成随机数 /roll [min=0] [max=9]",
-  private_pattern=r"^roll( ?[-\d]+( |/|~|-)+[-\d]+)?$",
+  private_pattern=r"^roll ?(?:([-\d]+([ \/\~\-]+[-\d]+)?)|[ \/\~\-]+[-\d]+)?$",
 )
 async def roll(update, context, text, _min=None, _max=None):
     if _min is None or _max is None:
@@ -29,7 +29,7 @@ async def roll(update, context, text, _min=None, _max=None):
       return msg
     
     
-@inline_handler(r"^$|(^(roll ?)?[-\d]+( |/|~|-)+[-\d]+$)", block=False)
+@inline_handler(r"^(?:roll ?)?(?:([-\d]+([ \/\~\-]+[-\d]+)?)|[ \/\~\-]+[-\d]+)?$", block=False)
 async def _(update, context, text):
   _min, _max = getMinMax(text)
   r = random.randint(_min, _max)
@@ -48,14 +48,22 @@ async def _(update, context, text):
   
 def getMinMax(text):
   text = text.replace('roll', '').strip()
-  text = re.sub(r'(\d+)-(\d+)', r'\1 \2', text)
-  arr = list(filter(lambda x: x != '', re.split(r' |/|~', text)))
-  try:
-    _min = int(arr[0])
-  except Exception:
-    _min = 0
-  try:
-    _max = int(arr[1])
-  except Exception:
-    _max = 9
+  text = re.sub(r'(\d+)- ?(\d+)', r'\1 \2', text)
+  f = True
+  _min = 0
+  _max = 9
+  arr = re.split(r'([ \/~])', text)
+  logger.info(arr)
+  for i in arr:
+    if re.match(r'^-?[\d]+$', i):
+      if f: 
+        _min = int(i)
+      else:
+        _max = int(i)
+    elif re.match(r'[ \/~]', i):
+      f = False
+  if _min > _max: 
+    t = _min
+    _min = _max
+    _max = t
   return _min, _max

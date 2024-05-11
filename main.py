@@ -188,7 +188,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
           return loop.create_task(task)
         else: 
           tasks.append(task)
-    logger.info(tasks)
+    # logger.info(tasks)
     results = []
     btn = None
     if len(tasks) > 0:
@@ -200,8 +200,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if _btn is not None:
           btn = _btn
        
-
-    if len(results) > 0 or len(btn) > 0:
+    if len(results) > 0 or btn is not None:
       await update.inline_query.answer(
           results,
           cache_time=10,
