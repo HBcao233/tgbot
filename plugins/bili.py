@@ -120,23 +120,47 @@ async def _(update, context, text):
         headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
         params=wbi(mixin_key, {
           'fnver': 0,
-          'fnval': 1,
+          'fnval': 16,
           'qn': 64,
           'avid': aid,
           'cid': res['cid'],
         })
       )
-      logger.info(r1.text)
+      # logger.info(r1.text)
       res1 = r1.json()['data']
-      url = res1['durl'][0]['url']
-      md5 = util.md5sum(string=url)
-      img = await util.getImg(
-        url,
+      # logger.info(json.dumps(res1['dash']['video']))
+      # logger.info(json.dumps(res1['dash']['audio']))
+      
+      video_url = None
+      audio_url = None
+      videos = res1['dash']['video']
+      audios = res1['dash']['audio']
+      for i in videos:
+        if i['id'] == 64:
+          video_url = i['base_url']
+          break
+      for i in audios:
+        if i['id'] == 30216:
+          audio_url = i['base_url']
+          break
+      #v_md5 = util.md5sum(video_url)
+      #a_md5 = util.md5sum(audio_url)
+      result = await asyncio.gather(util.getImg(
+        video_url,
         headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
-        saveas=f"{md5}.mp4",
-        params=wbi(mixin_key),
+      ), util.getImg(
+        audio_url,
+        headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
+      )) 
+      logger.info(result[0])
+      proc = await asyncio.create_subprocess_exec(
+        'ffmpeg', '-i', result[0], '-i', result[1], '-c:v', 'copy', '-c:a', 'copy', '-y', f'{config.botRoot}/data/cache/{bvid}.mp4',
+        stdout=asyncio.subprocess.PIPE, 
+        stdin=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
       )
-      video = open(img, 'rb')
+      await proc.wait()
+      video = open(config.botRoot + f'/data/cache/{bvid}.mp4', 'rb')
     
     m1 = await bot.send_video(
       video=video,

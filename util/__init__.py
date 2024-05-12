@@ -146,13 +146,15 @@ async def getImg(
             headers = dict(_headers, **headers) if headers else None
             async with httpx.AsyncClient(
               proxies=config.proxies if proxy else None, 
-              verify=False
+              verify=False,
+              timeout=httpx.Timeout(connect=None, read=None, write=None, pool=None),
+              http2=True,
             ) as client:
               async with client.stream(
                 'GET', url=url, headers=headers,
               ) as r:
                 with open(path, "wb") as f:
-                  async for chunk in r.aiter_bytes():
+                  async for chunk in r.aiter_raw():
                     f.write(chunk)
 
             if rand:
