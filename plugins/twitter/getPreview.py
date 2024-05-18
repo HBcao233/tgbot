@@ -4,6 +4,7 @@ import os.path
 import re
 
 import util
+import util.string as string
 from util.log import logger
 import util.html2image as html2image
 
@@ -23,10 +24,10 @@ async def getPreview(res, medias, full_text, time):
   line = len(arr)
   for i in arr:
     i = re.sub(r'<a[^>]*>(((?!</a>).)*)</a>', r'\1', i)
-    # logger.info(f'{i = }')
-    char_num = len(i.encode('utf-8'))
-    add = math.ceil(char_num / 60) - 1
+    width = string.width(i)
+    add = math.ceil(width / 42) - 1
     line += add
+    logger.info(f'{i = }, {add = }')
   logger.info(f'{line = }')
   
   medias_html = ''
@@ -181,3 +182,4 @@ async def getPreview(res, medias, full_text, time):
   f = util.getCache(filename)  
   html2image.screenshot(html, f, (1200, 1150+line*60)) 
   return f
+  

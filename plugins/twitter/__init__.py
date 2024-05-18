@@ -106,12 +106,12 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
       logger.warning(traceback.format_exc())
     else: 
       flag = True
-      ms[0]._unfreeze()
-      ms[0].caption = None
+      #ms[0]._unfreeze()
+      #ms[0].caption = None
       add = InputMediaPhoto(
         media=open(img, 'rb'),
-        caption=msg,
-        parse_mode="HTML",
+        #caption=msg,
+        #parse_mode="HTML",
         has_spoiler=mark,
       )
       ms = [add] + ms
