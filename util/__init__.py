@@ -64,9 +64,9 @@ async def post(url, *, proxy=False, headers=None, params=None, data=None, **kwar
     )
 
 
-def getCache(name=''):
+def getFile(dir_name='', name=''):
   name = str(name)
-  path = config.botRoot + "/data/cache/"
+  path = os.path.join(config.botRoot, dir_name)
   f = ''
   for i in os.listdir(path):
     if os.path.splitext(i)[0] == name:
@@ -76,7 +76,13 @@ def getCache(name=''):
     f = name
     if "." not in f:
       f += ".cache"
-  return path + f
+  return os.path.join(path, f)
+  
+def getResource(name=''):
+  return getFile('resources/', name)
+  
+def getCache(name=''):
+  return getFile("data/cache/", name)
 
 
 async def getImg(

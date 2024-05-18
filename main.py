@@ -78,10 +78,12 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
       context.bot_data['media_group'][message.media_group_id].append(message)
       return
 
+    '''
     if message.photo or message.video or message.document or message.audio:
       if config.echo_chat_id != 0:
         message = await bot.forwardMessage(chat_id=config.echo_chat_id, from_chat_id=message.chat.id, message_id=message.message_id)
         logger.info(message)
+    '''
 
     if message.photo:
         await update.message.reply_text(

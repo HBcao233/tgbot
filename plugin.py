@@ -79,7 +79,7 @@ def button_handler(pattern):
   
 def load_plugin(name):
   try:
-    __import__(name, fromlist=[None])
+    __import__(name, fromlist=[])
     logger.info('Success to load plugin "' + name + '"')
   except Exception:
     logger.warning('Error to load plugin "' + name + '"')

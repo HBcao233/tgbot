@@ -26,9 +26,10 @@ from util.log import logger
 from plugin import handler, inline_handler, button_handler
     
 
+_end = r'/?(\?.*)?(#.*)?$'
 @handler('pid', 
   private_pattern=r"((^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
-                  r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}))/?(\?.*)?(#.*)?$",
+                  r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}))" + _end,
   pattern=r"((^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
           r"(^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}))/?(\?.*)?(#.*)?$",
   info="获取p站作品 /pid <url/pid> [hide] [mark]"
@@ -227,8 +228,8 @@ async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):
     #
 
 
-@inline_handler(r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
-                r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?\d{6,12})")
+@inline_handler(r"((^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
+                r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?\d{6,12}))" + _end)
 async def _(update, context, query):
   text = query
 
@@ -364,10 +365,10 @@ def parsePidMsg(res, hide=False):
           .replace("<br>", "\n")
           .replace(' target="_blank"', "")
       )
-      comment = re.sub('<span[^>]*>(((?!</span>).)*)</span>', '\2', comment)
+      comment = re.sub(r'<span[^>]*>(((?!</span>).)*)</span>', r'\1', comment)
       if len(comment) > 400:
-          comment = re.sub('<[^/]+[^<]*(<[^>]*)?$', '', comment[:200])
-          comment = re.sub('\n$','',comment)
+          comment = re.sub(r'<[^/]+[^<]*(<[^>]*)?$', '', comment[:200])
+          comment = re.sub(r'\n$','',comment)
           comment = comment + '\n......'
       if comment != '':
           comment = ':\n' + comment
