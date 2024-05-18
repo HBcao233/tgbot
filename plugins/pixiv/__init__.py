@@ -21,7 +21,7 @@ from plugin import handler, inline_handler, button_handler
 from .data_source import parseText, parsePidMsg
 
 
-_end = r'/?(\?.*)?(#.*)?$'
+_end = r'/?(\?.*)?(#.*)?( .*)?$'
 @handler('pid', 
   private_pattern=r"((^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
                   r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}))" + _end,
@@ -48,22 +48,22 @@ async def pid(update, context, text=None):
       reply_to_message_id=update.message.message_id,
   )
   try:
-      r = await util.get(
-          f"https://www.pixiv.net/ajax/illust/{pid}",
-          proxy=True,
-          headers=config.pixiv_headers,
-      )
+    r = await util.get(
+        f"https://www.pixiv.net/ajax/illust/{pid}",
+        proxy=True,
+        headers=config.pixiv_headers,
+    )
   except Exception:
-      return await update.message.reply_text(
-          "连接超时",
-          reply_to_message_id=update.message.message_id,
-      )
+    return await update.message.reply_text(
+        "连接超时",
+        reply_to_message_id=update.message.message_id,
+    )
   res = r.json()
   if res["error"]:
-      return await update.message.reply_text(
-          '错误: '+res["message"],
-          reply_to_message_id=update.message.message_id,
-      )
+    return await update.message.reply_text(
+        '错误: ' + res["message"],
+        reply_to_message_id=update.message.message_id,
+    )
   msg = parsePidMsg(res["body"], hide)
 
   imgUrl = res["body"]["urls"]["original"]
@@ -76,60 +76,55 @@ async def pid(update, context, text=None):
   async def _m():
     nonlocal origin, mid, bot, imgUrl, update, count, pcount
     ms = []
+    documents = util.Documents()
     i = p * 9
     while i < min((p + 1) * 9, count):
       url = imgUrl.replace("_p0", f"_p{i}")
-      try:
-        img = await util.getImg(
-          url, 
-          saveas=f"{pid}_p{i}", 
-          ext=True, 
-          headers=config.pixiv_headers, 
-          proxy=True, 
-        )
-      except Exception:
-        logger.warning(traceback.format_exc())
-        await update.message.reply_text(
-          (
-              f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-              if min((p + 1) * 9, count) != 1
-              else ""
-          ) + "图片获取失败",
-          reply_to_message_id=update.message.message_id,
-        )
-        return False
-          
+      name = f"{pid}_p{i}"
+      tip = (
+          f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
+          if min((p + 1) * 9, count) != 1
+          else ""
+      )
+      if not (origin and (media := documents[name])):
+        try:
+          img = await util.getImg(
+            url, 
+            saveas=name, 
+            ext=True, 
+            headers=config.pixiv_headers, 
+            proxy=True, 
+          )
+          media = open(img, 'rb')
+        except Exception:
+          logger.warning(traceback.format_exc())
+          await update.message.reply_text(
+            tip + "图片获取失败",
+            reply_to_message_id=update.message.message_id,
+          )
+          return False
+      
       caption = (
-        (msg if i == 0 else "")
-        + (
-            f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-            if min((p + 1) * 9, count) > 9
-            else ""
-        )
+        (msg if i == 0 else "") + tip
         if len(ms) == 0
         else None
       )
       
-      stats = os.stat(img)
-      size_M = stats.st_size // 1024 // 1024
+      # stats = os.stat(img)
+      # size_M = stats.st_size // 1024 // 1024
       if not origin:
         ms.append(
           InputMediaPhoto(
-            media=open(img, "rb"),
+            media=media,
             caption=caption,
             parse_mode="HTML",
             has_spoiler=mark,
           )
         )
       else:
-        if not origin:
-          i = 0
-          origin = True
-          ms = []
-          continue
         ms.append(
           InputMediaDocument(
-            media=open(img, "rb"),
+            media=media,
             caption=caption,
             parse_mode="HTML",
           )
@@ -137,7 +132,7 @@ async def pid(update, context, text=None):
       i += 1
 
     try:
-      await update.message.reply_media_group(
+      m = await update.message.reply_media_group(
         media=ms,
         reply_to_message_id=update.message.message_id,
         read_timeout=120,
@@ -145,6 +140,12 @@ async def pid(update, context, text=None):
         connect_timeout=120,
         pool_timeout=120,
       )
+      if origin:
+        for i in range(0, min(9, count)):
+          ii = p * 9 + i
+          name = f"{pid}_p{ii}"
+          documents[name] = m[i].document.file_id
+        documents.save()
     except Exception:
       logger.info(msg)
       logger.error(traceback.print_exc())
@@ -170,6 +171,7 @@ async def pid(update, context, text=None):
           reply_to_message_id=update.message.message_id,
       )
     return True
+    
   for p in range(pcount):
     await bot.edit_message_text(
         chat_id=update.message.chat_id,

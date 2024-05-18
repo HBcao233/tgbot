@@ -11,6 +11,10 @@ from .file import getCache
 
 from .data import getData
 from .data import setData
+from .data import Data
+from .data import Photos
+from .data import Videos
+from .data import Documents
 
 from .curl import request
 from .curl import get
@@ -30,6 +34,10 @@ __all__ = [
   
   'getData',
   'setData',
+  'Data', 
+  'Photos',
+  'Videos',
+  'Documents',
   
   'request',
   'get',
