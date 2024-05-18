@@ -4,7 +4,8 @@
 demo: [@hbcao1bot](https://t.me/hbcao1bot)
 
 ## 安装
-安装Python
+1.安装Python
+2.执行以下操作
 ```bash
 # 1.克隆仓库或者手动下载
 git clone https://github.com/HBcao233/tgbot
@@ -23,6 +24,16 @@ tgbot log
 # 关闭
 tgbot stop
 ```
+3.（可选, 用于生成Twitter预览图）安装 google-chrome 或 chromium
+```bash
+# Ubantu
+apt install https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+# Centos
+rpm -ivh https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
+# 查看版本
+google-chrome --version
+```
+
 
 ## 配置
 重命名 `config.py.example` 为 `config.py`，按照备注修改配置
