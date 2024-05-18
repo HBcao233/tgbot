@@ -64,6 +64,21 @@ async def post(url, *, proxy=False, headers=None, params=None, data=None, **kwar
     )
 
 
+def getCache(name=''):
+  name = str(name)
+  path = config.botRoot + "/data/cache/"
+  f = ''
+  for i in os.listdir(path):
+    if os.path.splitext(i)[0] == name:
+      f = i
+      break
+  if f == "":
+    f = name
+    if "." not in f:
+      f += ".cache"
+  return path + f
+
+
 async def getImg(
     url, *, proxy=True, cache=True, path=None, headers=None, rand=False, ext=False, saveas=None, **kwargs
 ) -> str:

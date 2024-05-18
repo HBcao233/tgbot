@@ -19,12 +19,13 @@ import datetime
 import urllib.parse
 import ujson as json
 from uuid import uuid4
+import os.path
 
 import config
 import util
 from util.log import logger
 from plugin import handler, inline_handler
-
+import util.html2image as html2image
 
 @handler('tid',
   private_pattern=r"^((https?://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?\d{13,}(.*)$",
@@ -68,21 +69,19 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         return await update.message.reply_text(res['tombstone']['text']['text'])
     
     tweet = res["legacy"]
-    msg = parseTidMsg(tid, res) if not hide else 'https://x.com/i/status/' + tid
-  
+    msg, full_text = parseTidMsg(tid, res) if not hide else 'https://x.com/i/status/' + tid
+    
     if "extended_entities" not in tweet.keys():
         return await update.message.reply_text(msg, parse_mode="MarkdownV2")
 
     # 格式化媒体
-    medias = tweet["extended_entities"]["media"]
+    medias = parseMedias(tweet)
     ms = []
-    md5s = []
     videos = util.getData('videos')
     for media in medias:
       if media["type"] == "photo":
-        url = media["media_url_https"] + ":orig"
-        md5 = util.md5sum(url)
-        md5s.append(md5)
+        url = media["url"]
+        md5 = media['md5']
         img = await util.getImg(
           url, 
           headers=config.twitter_headers,
@@ -97,17 +96,14 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         )
         ms.append(add)
       else:
-        variants = media["video_info"]["variants"]
-        variants = list(
-            filter(lambda x: x["content_type"] == "video/mp4", variants)
-        )
-        variants.sort(key=lambda x: x["bitrate"], reverse=True)
-        url = variants[0]["url"]
-        if len(variants) >= 2: url = variants[1]["url"]
-        md5 = util.md5sum(url)
-        md5s.append(md5)
+        url = media["url"]
+        md5 = media['md5']
         if not (video := videos.get(md5, None)):
-          img = await util.getImg(url, headers=config.twitter_headers, saveas=f"{md5}.mp4")
+          img = await util.getImg(
+            url, 
+            headers=config.twitter_headers, 
+            saveas=f"{md5}.mp4"
+          )
           video = open(img, 'rb')
         add = InputMediaVideo(
           media=video,
@@ -116,7 +112,24 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
           has_spoiler=mark,
         )
         ms.append(add)
-
+    
+    flag = False
+    try:
+      img = await getPreview(res, full_text, medias)
+    except Exception:
+      logger.warning(traceback.format_exc())
+    else: 
+      flag = True
+      ms[0]._unfreeze()
+      ms[0].caption = None
+      add = InputMediaPhoto(
+        media=open(img, 'rb'),
+        caption=msg,
+        parse_mode="HTML",
+        has_spoiler=mark,
+      )
+      ms = [add] + ms
+      
     # 发送
     try:
       m = await update.message.reply_media_group(
@@ -127,12 +140,15 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         connect_timeout=60,
         pool_timeout=60,
       )
+      if flag:
+        m = m[1:]
       for i, ai in enumerate(m):
+        md5 = medias[i]['md5']
         #if getattr(ai, 'photo', None) and not photos.get(md5s[i], None):
         #  photos[md5s[i]] = ai.photo[-1].file_id
         
-        if getattr(ai, 'video', None) and not videos.get(md5s[i], None):
-          videos[md5s[i]] = ai.video.file_id
+        if getattr(ai, 'video', None) and not videos.get(md5, None):
+          videos[md5] = ai.video.file_id
       # util.setData('photos', photos)
       util.setData('videos', videos)
     except Exception:
@@ -172,7 +188,7 @@ async def _(update, context, text):
   msg = parseTidMsg(tid, res, hide)
   count = 0
   if "extended_entities" in tweet.keys():
-      medias = tweet["extended_entities"]["media"]
+      medias = parseMedias(tweet)
       ms = []
       for media in medias:
           if media["type"] == "photo":
@@ -180,25 +196,19 @@ async def _(update, context, text):
               results.append(
                   InlineQueryResultPhoto(
                       id=str(uuid4()),
-                      photo_url=media["media_url_https"] + ":orig",
-                      thumbnail_url=media["media_url_https"] + ":small",
+                      photo_url=media["url"],
+                      thumbnail_url=media["thumbnail_url"],
                       caption=msg,
                       parse_mode="HTML",
                   )
               )
           else:
               count += 1
-              variants = media["video_info"]["variants"]
-              variants = list(
-                  filter(lambda x: x["content_type"]
-                         == "video/mp4", variants)
-              )
-              variants.sort(key=lambda x: x["bitrate"], reverse=True)
               results.append(
                   InlineQueryResultVideo(
                       id=str(uuid4()),
-                      video_url=variants[0]["url"],
-                      thumbnail_url=variants[-1]["url"],
+                      video_url=media["url"],
+                      thumbnail_url=media["thumbnail_url"],
                       title=msg,
                       mime_type="video/mp4",
                       caption=msg,
@@ -206,6 +216,7 @@ async def _(update, context, text):
                       description=f'最佳质量(bitrate: {variants[0]["bitrate"]}, 若预览图为空，请勿选择)',
                   )
               )
+              variants = media['variants']
               if len(variants) >= 2:
                   results.append(
                       InlineQueryResultVideo(
@@ -213,7 +224,7 @@ async def _(update, context, text):
                           video_url=variants[1]["url"],
                           title=msg,
                           mime_type="video/mp4",
-                          thumbnail_url=variants[-1]["url"],
+                          thumbnail_url=media["thumbnail_url"],
                           caption=msg,
                           parse_mode="HTML",
                           description=f'较高质量(bitrate: {variants[1]["bitrate"]})',
@@ -332,14 +343,198 @@ def parseTidMsg(tid, res):
 
     user_name = user["name"]
     user_screen_name = user["screen_name"]
-    #t = dateutil.parser.parse(tweet["created_at"]) + datetime.timedelta(hours=8)
-    #time = t.strftime("%Y年%m月%d日 %H:%M:%S")
+    t = dateutil.parser.parse(tweet["created_at"]) + datetime.timedelta(hours=8)
+    time = t.strftime("%Y年%m月%d日 %H:%M:%S")
     msg = (
-      f'<a href="https://x.com/i/status/{tid}">{tid}</a> - '
-      f'<a href="https://x.com/{user_screen_name}">{user_name}</a>:'
-      f"\n{full_text}"
+      f'<a href="https://x.com/{user_screen_name}/status/{tid}">{time}</a>\n'
+      f'<a href="https://x.com/{user_screen_name}">{user_name}</a>'
     )
+    if full_text != '':
+      msg += f":\n{full_text}"
     #f"\n\n<a href=\"https://x.com/{user_screen_name}/status/{tid}\">From X at {time}</a>\n"
     
-    return msg
+    return msg, full_text
     
+def parseMedias(tweet):
+  res = []
+  medias = tweet["extended_entities"]["media"]
+  for media in medias:
+    if media["type"] == "photo":
+      res.append({
+        'type': 'photo',
+        'url': media["media_url_https"] + ":orig",
+        'md5': util.md5sum(media["media_url_https"] + ":orig"),
+        'thumbnail_url': media["media_url_https"] + ":small",
+      })
+    else:
+      variants = media["video_info"]["variants"]
+      variants = list(
+        filter(lambda x: x["content_type"] == "video/mp4", variants)
+      )
+      variants.sort(key=lambda x: x["bitrate"], reverse=True)
+      url = variants[1]["url"] if len(variants) > 1 else variants[0]["url"]
+      res.append({
+        'type': 'video',
+        'url': url,
+        'md5': util.md5sum(url),
+        'thumbnail_url': variants[-1]["url"],
+        'variants': variants,
+      })
+  return res
+  
+    
+async def getPreview(res, full_text, medias):
+  import cv2
+  
+  tweet = res["legacy"]
+  user = res["core"]["user_results"]["result"]["legacy"]
+  # logger.info(tweet)
+  tid = tweet['id_str']
+  name = user['name']
+  username = '@' + user['screen_name']
+  profile = user['profile_image_url_https']
+  profile_img = await util.getImg(profile)
+  
+  medias_html = ''
+  logger.info(medias)
+  for media in medias:
+    ai = media['md5']
+    img = util.getCache(ai)
+    if not os.path.isfile(img):
+      await util.getImg(media['url'])
+    if media['type'] == 'photo':
+      medias_html += f'<div class="media"><img src="{img}" /></div>'
+    else:
+      cap = cv2.VideoCapture(img)
+      ret, frame = cap.read()
+      img = util.getCache(ai + '_preview.jpg')
+      cv2.imwrite(img, frame)
+      cap.release()
+      medias_html += f'''<div class="media"><img src="{img}" /><img class="video" src="{config.botRoot + '/resources/video.png'}"/></div>'''
+  logger.info(medias_html)
+  
+  html = (
+    '''<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    * {
+     padding: 0;
+     margin: 0;
+     font-family: SimSun;
+     font-size: 25px;
+    }
+    .tweet { 
+      width: 100vw; 
+      padding: 30px;
+    }
+    .tweet .head, .tweet .body { 
+      width: calc(100% - 60px); 
+      height: auto; 
+    }
+    .tweet .head {
+      display: flex;
+      flex-direction: row;
+    }
+    .box {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      overflow: hidden;
+    } 
+    .box img {width:100%;height:100%;}
+    .userinfo {
+      height: 80px;
+      margin-left: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .userinfo .nickname, .userinfo .username {
+      max-width: 200px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .userinfo .nickname {
+      font-weight: bold;
+    }
+    .body {
+      padding: 0 5px;
+    }
+    .medias {
+      width: calc(100% - 10px);
+      height: 400px;
+      overflow: hidden;
+      border-radius: 25px;
+      font-size: 0;
+      display: grid;
+      grid-auto-flow: row dense;
+      grid-template-columns: repeat(2, 50%);
+      grid-template-rows: repeat(2, 50%);
+      grid-gap: 5px;
+    }
+    .medias .media {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 1px solid #eee;
+      overflow: hidden;
+      grid-column-end: span 2;
+      grid-row-end: span 2;
+    }
+    .media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .medias:has(> .media:nth-child(2)) > .media {
+      grid-column-end: span 1;
+    }
+    
+    .medias:has(> .media:nth-child(3)) > .media {
+      grid-row-end: span 1;
+    }
+    .medias:has(> .media:nth-child(3)) > .media:nth-child(1) {
+      grid-row-end: span 2;
+    }
+    
+    .medias:has(> .media:nth-child(4)) > .media {
+      grid-column-end: span 1;
+      grid-row-end: span 1;
+    }
+    
+    .medias .media .video {
+      display: inline-block;
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      top: 50%;
+      left: 50%;
+      -webkit-transform: translate(-50%, -50%);
+      border: none;
+      margin: 0;
+    }
+    </style></head>'''
+    f'''<body>
+    <div class="tweet">
+      <div class="head">
+        <div class="box"><img src="{profile_img}" /></div>
+        <div class="userinfo">
+          <div class="nickname">{name}</div>
+          <div class="username">{username}</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="content">{full_text}</div>
+        <div class="medias">{medias_html}<div>
+      </div>
+    </div>
+  </body></html>'''
+  )
+  filename = f"t{tid}.jpg"
+  f = util.getCache(filename)
+  html2image.screenshot(html, f, (500, 700))
+  return f

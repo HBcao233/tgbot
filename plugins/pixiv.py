@@ -27,10 +27,10 @@ from plugin import handler, inline_handler, button_handler
     
 
 @handler('pid', 
-  private_pattern=r"(^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
-                  r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12})",
-  pattern=r"(^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
-        r"(^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12})",
+  private_pattern=r"((^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
+                  r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}))/?(\?.*)?(#.*)?$",
+  pattern=r"((^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
+          r"(^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}))/?(\?.*)?(#.*)?$",
   info="获取p站作品 /pid <url/pid> [hide] [mark]"
 )
 async def pid(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None):

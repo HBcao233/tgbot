@@ -5,3 +5,4 @@ nest_asyncio
 ujson
 python-dateutil
 bs4
+opencv-python
