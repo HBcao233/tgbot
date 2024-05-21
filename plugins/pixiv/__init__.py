@@ -83,7 +83,7 @@ async def pid(update, context, text=None):
       name = f"{pid}_p{i}"
       tip = (
           f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-          if min((p + 1) * 9, count) != 1
+          if p > 1
           else ""
       )
       if not (origin and (media := documents[name])):
