@@ -22,7 +22,7 @@ from util.log import logger
 from plugin import handler, button_handler
 
 
-private_pattern = r"((https://)?kemono.(party|su)/)?[^/]+(/user/\d+)?(/post)?/\d+"
+private_pattern = r"(?:(?:https://)?kemono\.(?:party|su)/)?([^/]+)(?:/user)?/(\d+)(?:/post)?/(\d+)"
 @handler('kid',
   private_pattern="^"+private_pattern,
   pattern="^kid " + private_pattern,
@@ -42,26 +42,35 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         if 'origin' in args or '原图' in args: origin = True
     logger.info(f"text: {text}, hide: {hide}, mark: {mark}")
 
-    if not re.match(private_pattern, text):
+    if not (match := re.match(private_pattern, text)):
         return await update.message.reply_text(
           "用法: /kid <url> [hide] [mark/遮罩] [origin/原图]"
         )
     bot = context.bot
-    _kid = re.sub(r'((https://)?kemono.(party|su)/)?([^/]+)(/user/\d+)?(/post)?/(\d+)', r'\4/\7', text)
+    
+    source = match.group(1)
+    uid = match.group(2)
+    _kid = match.group(3)
     #logger.info(_kid)
     arr = _kid.split('/')
-    kid = 'https://kemono.su/' + arr[0] + '/post/' + arr[1]
+    kid = f'https://kemono.su/{source}/user/{uid}/post/{_kid}' 
     mid = await update.message.reply_text(
         "请等待...", reply_to_message_id=update.message.message_id
     )
     r = await util.get(kid)
+    if r.status_code != 200:
+      return await update.reply_text(
+          reply_to_message_id=mid.message_id,
+          text='请求失败',
+      )
     try:
       msg, files, other = parseKidMsg(kid, r.text, hide)
     except Exception as e:
+      logger.warning(traceback.format_exc())
       return await bot.edit_message_text(
           chat_id=update.message.chat_id,
           message_id=mid.message_id,
-          text=e,
+          text=str(e),
       )
       
     if 'fanbox' in _kid and len(files) > 1:
@@ -162,7 +171,7 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
     keyboard = [
         [
-            InlineKeyboardButton("获取原图", callback_data=f"{_kid} {'hide' if hide else ''} origin"),
+            InlineKeyboardButton("获取原图", callback_data=f"{source}/{uid}/{_kid} {'hide' if hide else ''} origin"),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -175,7 +184,7 @@ async def kid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     #await bot.delete_message(chat_id=update.message.chat_id, message_id=mid.message_id)
 
 
-@button_handler(pattern=r"[^/]+/\d+")
+@button_handler(pattern=r"^[^/]+/\d+/\d+")
 async def _(update, context, query):
     # logger.info(update)
     message = update.callback_query.message
@@ -191,13 +200,11 @@ async def _(update, context, query):
 def parseKidMsg(kid, _html, hide=False):
     soup = BeautifulSoup(_html, "html.parser")
     try:
-      user_name = soup.select(".site-section--post .post__header .post__user-name")[
-          0
-      ].text.strip()
+      p = soup.select(".post__user .post__user-name")
+      logger.info(p)
+      user_name = p[0].text.strip()
   
-      user_u: str = soup.select(".site-section--post .post__header .post__user-name")[
-          0
-      ].attrs["href"]
+      user_u: str = p[0].attrs["href"]
       user_uid = user_u.split("/")[-1]
       user_url = f"https://www.pixiv.net/fanbox/creator/{user_uid}"
   

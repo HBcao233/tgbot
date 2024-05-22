@@ -85,25 +85,25 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.info(message)
     '''
 
-    if message.photo:
+    if getattr(message, 'photo', None):
         await update.message.reply_text(
             f'<code>p_{message.photo[-1].file_id}</code>', 
             reply_to_message_id=update.message.message_id,
             parse_mode='HTML',
         )
-    if message.video:
+    if getattr(message, 'video', None):
         await update.message.reply_text(
             f'<code>vi_{message.video.file_id}</code>', 
             reply_to_message_id=update.message.message_id,
             parse_mode='HTML',
         )
-    if message.document:
+    if getattr(message, 'document', None):
         await update.message.reply_text(
             f'<code>d_{message.document.file_id}</code>', 
             reply_to_message_id=update.message.message_id,
             parse_mode='HTML',
         )
-    if message.audio:
+    if getattr(message, 'audio', None):
         await update.message.reply_text(
             f'<code>au_{message.audio.file_id}</code>', 
             reply_to_message_id=update.message.message_id,

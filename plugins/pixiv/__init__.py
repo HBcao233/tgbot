@@ -147,11 +147,11 @@ async def pid(update, context, text=None):
           documents[name] = m[i].document.file_id
         documents.save()
     except Exception:
-      logger.info(msg)
-      logger.error(traceback.print_exc())
+      logger.warning(traceback.format_exc())
       if not origin:
         origin = True
         return await _m()
+      logger.info(msg)
       await update.message.reply_text(
         (
           f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
