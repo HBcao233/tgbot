@@ -1,9 +1,11 @@
 from bs4 import BeautifulSoup
 import asyncio
 import re 
+import ujson as json
 
 import util
 import config
+from util import logger
 
 
 def parseEidSMsg(eid, _html):
@@ -63,7 +65,8 @@ async def parseEidGMsg(eid, soup):
     return title, num, magnets 
     
     
-async def parsePage(text, soup, title):
+async def parsePage(text, soup, title, num):
+  num = int(num)
   try:
     r = await util.post(
       'https://api.telegra.ph/getPageList', 
@@ -84,19 +87,27 @@ async def parsePage(text, soup, title):
     urls.append(i.attrs["href"])
     
   p = 1
-  while len(urls) < int(num):
+  while len(urls) < min(num, 100):
     try:
-      r = await util.get(text, params={'p': i}, headers=config.ex_headers)
+      r = await util.get(text, params={'p': p}, headers=config.ex_headers)
       html1 = r.text
       soup1 = BeautifulSoup(html1, "html.parser")
       for i in soup1.select("#gdt a"):
         urls.append(i.attrs["href"])
     except Exception:
+      urls.append('未能成功获取所有p')
       logger.warning('未能成功获取所有p')
       break
     p += 1
+  if num > 100:
+    urls.append('未能成功获取所有p: p数过多')
     
   async def parse(u):
+    if not u.startswith('http'):
+      return {
+        'tag': 'p',
+        'children': [u]
+      }
     r = await util.get(u, headers=config.ex_headers)
     html1 = r.text
     soup1 = BeautifulSoup(html1, "html.parser")

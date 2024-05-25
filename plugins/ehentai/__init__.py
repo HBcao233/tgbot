@@ -78,7 +78,7 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     
     with util.Data('urls') as data:
       if not (url := data[text]):
-        url = await parsePage(text, soup, title)
+        url = await parsePage(text, soup, title, num)
         if not url:
           return await context.bot.edit_message_text(
             chat_id=update.message.chat_id, 
