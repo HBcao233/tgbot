@@ -57,7 +57,7 @@ async def kid(update, context, text):
         text=str(e),
     )
     
-  if 'fanbox' in _kid and len(files) > 1:
+  if source == 'fanbox' and len(files) > 1:
     files = files[1:]
   
   key = f'kemono/{source}/{uid}/{_kid}'
