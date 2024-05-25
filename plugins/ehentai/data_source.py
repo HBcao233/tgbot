@@ -65,21 +65,22 @@ async def parseEidGMsg(eid, soup):
     return title, num, magnets 
     
     
-async def parsePage(text, soup, title, num):
+async def parsePage(text, soup, title, num, nocache=False, bar=None):
   num = int(num)
-  try:
-    r = await util.post(
-      'https://api.telegra.ph/getPageList', 
-      data={
-        'access_token': '135fa6b60c956b336ad499fc469950acbb6ab682f9a43fbeebd42da22433',
-        'limit': 200,
-      }
-    )
-    for i in r.json()['result']['pages']:
-      if i['title'] == title:
-        return i['url']
-  except:
-    pass
+  if not nocache:
+    try:
+      r = await util.post(
+        'https://api.telegra.ph/getPageList', 
+        data={
+          'access_token': '135fa6b60c956b336ad499fc469950acbb6ab682f9a43fbeebd42da22433',
+          'limit': 200,
+        }
+      )
+      for i in r.json()['result']['pages']:
+        if i['title'] == title:
+          return i['url']
+    except:
+      pass
   
   content = []
   urls = []
@@ -92,33 +93,31 @@ async def parsePage(text, soup, title, num):
       r = await util.get(text, params={'p': p}, headers=config.ex_headers)
       html1 = r.text
       soup1 = BeautifulSoup(html1, "html.parser")
-      for i in soup1.select("#gdt a"):
+      arr = soup1.select("#gdt a")
+      if bar: await bar.add(50//min(num, 100)*len(arr))
+      for i in arr:
         urls.append(i.attrs["href"])
     except Exception:
-      urls.append('未能成功获取所有p')
       logger.warning('未能成功获取所有p')
       break
     p += 1
-  if num > 100:
-    urls.append('未能成功获取所有p: p数过多')
-    
+  if bar: await bar.update(50)
+  
   async def parse(u):
-    if not u.startswith('http'):
-      return {
-        'tag': 'p',
-        'children': [u]
-      }
+    nonlocal bar, num
     r = await util.get(u, headers=config.ex_headers)
     html1 = r.text
     soup1 = BeautifulSoup(html1, "html.parser")
     url = soup1.select("#i3 img")[0].attrs["src"]
+    if bar:
+      await bar.add(50//num)
     return {
       'tag': 'img',
       'attrs': {
         'src': url,
       },
     }
-    
+  
   tasks = [parse(i) for i in urls]
   for i in await asyncio.gather(*tasks):
     content.append(i)

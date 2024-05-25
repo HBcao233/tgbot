@@ -16,6 +16,7 @@ import os.path
 import config
 import util
 from util.log import logger
+from util.progress import Progress
 from plugin import handler, inline_handler, button_handler
 
 from .data_source import parseText, parsePidMsg
@@ -75,6 +76,10 @@ async def pid(update, context, text=None):
   
   async def _m():
     nonlocal origin, mid, bot, imgUrl, update, count, pcount
+    bar = Progress(
+      bot, mid, 
+      "正在获取 p" + f"{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}",
+    )
     ms = []
     documents = util.Documents()
     i = p * 9
@@ -103,6 +108,8 @@ async def pid(update, context, text=None):
             reply_to_message_id=update.message.message_id,
           )
           return False
+        else:
+          await bar.add(80//(min((p + 1) * 9, count) - p * 9))
       
       caption = (
         (msg if i == 0 else "") + tip
@@ -173,12 +180,6 @@ async def pid(update, context, text=None):
     return True
     
   for p in range(pcount):
-    await bot.edit_message_text(
-        chat_id=update.message.chat_id,
-        message_id=mid.message_id,
-        text="正在获取 p" +
-        f"{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}",
-    )
     if not await _m(): return
   
   keyboard = [[]]

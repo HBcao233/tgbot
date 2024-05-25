@@ -17,6 +17,7 @@ import util
 from util.log import logger
 from plugin import handler
 from .data_source import parseEidSMsg, parseEidGMsg, parsePage
+from util.progress import Progress
 
 
 @handler('eid',
@@ -28,11 +29,14 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
   text: str = update.message["text"] if text is None else text
 
   mark = False
+  nocache = False
   args = text.split(" ")
   if len(args) >= 2:
     text = args[0]
     if "mark" in args:
       mark = True
+    if 'nocache' in args:
+      nocache = True
   logger.info(f"text: {text}, mark: {mark}")
 
   match = re.match(r"https?://e[x-]hentai.org/[sg]/.*", text)
@@ -77,8 +81,9 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     title, num, magnets = await parseEidGMsg(text, soup)
     
     with util.Data('urls') as data:
-      if not (url := data[text]):
-        url = await parsePage(text, soup, title, num)
+      if not (url := data[text]) or nocache:
+        bar = Progress(context.bot, mid)
+        url = await parsePage(text, soup, title, num, nocache, bar)
         if not url:
           return await context.bot.edit_message_text(
             chat_id=update.message.chat_id, 
