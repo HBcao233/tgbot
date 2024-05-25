@@ -22,6 +22,10 @@ proxies = {
 base_url = 'https://api.telegram.org/bot' # http://0.0.0.0:8081/bot
 base_file_url = 'https://api.telegram.org/file/bot' # http://0.0.0.0:8081/file/bot
 
+telegraph_author_name = '小派魔'
+telegraph_author_url = 'https://t.me/hbcao1bot'
+telegraph_access_token = '135fa6b60c956b336ad499fc469950acbb6ab682f9a43fbeebd42da22433'
+
 pixiv_headers = {
   # Pixiv 的 Cookie, 只需要 PHPSESSID 字段
   "cookie": "PHPSESSID=",

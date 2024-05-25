@@ -22,7 +22,7 @@ class Progress:
     self.prefix = prefix
     
   
-  async def update(self, p=0):
+  def update(self, p=0):
     if self.task is not None:
       self.task.cancel()
       self.task = None
@@ -42,10 +42,10 @@ class Progress:
     except:
       logger.warning(traceback.format_exc())
     
-  async def add(self, p=1):
+  def add(self, p=1):
     self.p += p
     try:
-      await self.update(self.p)
+      self.update(self.p)
     except:
       logger.warning(traceback.format_exc())
     

@@ -109,7 +109,7 @@ async def pid(update, context, text=None):
           )
           return False
         else:
-          await bar.add(80//(min((p + 1) * 9, count) - p * 9))
+          bar.add(80//(min((p + 1) * 9, count) - p * 9))
       
       caption = (
         (msg if i == 0 else "") + tip
