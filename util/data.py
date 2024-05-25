@@ -32,10 +32,10 @@ class Data(object):
   def save(self):
     setData(self.file, self.data)
     
-  def __enter__(self, file: str):
+  def __enter__(self):
     return self
     
-  def __exit__(self):
+  def __exit__(self, type, value, trace):
     self.save()
 
 class Photos(Data):

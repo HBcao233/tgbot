@@ -28,7 +28,9 @@ async def request(
     # logger.info(headers)
     
     r = await client.request(
-      method, url=url, headers=headers, data=data, params=params, **kwargs
+      method, url=url, headers=headers, data=data, params=params, 
+      timeout=httpx.Timeout(connect=None, read=None, write=None, pool=None),
+      **kwargs
     )
     
     if params is None: params = dict()
@@ -43,7 +45,9 @@ async def request(
       url = r.headers['Location']
       if 'http' not in url: url = p.scheme + '://' + p.netloc + '/' + url
       r = await client.request(
-        method, url=url, headers=headers, data=data, **kwargs
+        method, url=url, headers=headers, data=data, 
+        timeout=httpx.Timeout(connect=None, read=None, write=None, pool=None),
+        **kwargs
       )
     logger.info(f"{method} {url} code: {r.status_code}")
     await client.aclose()
