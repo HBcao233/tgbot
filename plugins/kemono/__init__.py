@@ -68,7 +68,8 @@ async def kid(update, context, text):
   msg = (
     f'标题: {title}\n'
     f'作者: <a href="{user_url}">{user_name}</a>\n'
-    f'预览: {url}'
+    f'预览: {url}\n'
+    f'原链接: {kid}'
   )
   if attachments:
     msg += '\n' + attachments
