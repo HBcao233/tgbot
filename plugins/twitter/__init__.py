@@ -71,7 +71,7 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         img = await util.getImg(
           url, 
           headers=config.twitter_headers,
-          saveas=f"{md5}.png"
+          ext="png"
         )
         photo = open(img, 'rb')
         add = InputMediaPhoto(
@@ -88,7 +88,7 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
           img = await util.getImg(
             url, 
             headers=config.twitter_headers, 
-            saveas=f"{md5}.mp4"
+            ext="mp4"
           )
           video = open(img, 'rb')
         add = InputMediaVideo(
@@ -99,22 +99,14 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         )
         ms.append(add)
     
-    flag = False
     try:
       img = await getPreview(res, medias, full_text, time)
+      await update.message.reply_photo(
+        photo=open(img, 'rb'),
+        reply_to_message_id=update.message.message_id,
+      )
     except Exception:
       logger.warning(traceback.format_exc())
-    else: 
-      flag = True
-      #ms[0]._unfreeze()
-      #ms[0].caption = None
-      add = InputMediaPhoto(
-        media=open(img, 'rb'),
-        #caption=msg,
-        #parse_mode="HTML",
-        has_spoiler=mark,
-      )
-      ms = [add] + ms
       
     # 发送
     try:
@@ -126,8 +118,6 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         connect_timeout=60,
         pool_timeout=60,
       )
-      if flag:
-        m = m[1:]
       for i, ai in enumerate(m):
         md5 = medias[i]['md5']
         #if getattr(ai, 'photo', None) and not photos.get(md5s[i], None):

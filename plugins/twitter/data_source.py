@@ -3,6 +3,7 @@ import ujson as json
 import dateutil.parser
 import datetime
 import urllib.parse
+import traceback
 
 import config
 import util
@@ -69,7 +70,7 @@ async def get_twitter(tid):
     )
     try:
         r = await util.get(
-            url, params=data, headers=config.twitter_headers, proxy=True, timeout=60
+          url, params=data, headers=config.twitter_headers, 
         )
         tweet_detail = r.json()
         if "errors" in tweet_detail.keys() and len(tweet_detail["errors"]) > 0:

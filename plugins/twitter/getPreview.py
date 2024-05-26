@@ -25,8 +25,9 @@ async def getPreview(res, medias, full_text, time):
   for i in arr:
     i = re.sub(r'<a[^>]*>(((?!</a>).)*)</a>', r'\1', i)
     width = string.width(i)
-    add = math.ceil(width / 42) - 1
-    line += add
+    add = math.ceil(width / 42) - 1 
+    if add > 0: 
+      line += add
     logger.info(f'{i = }, {add = }')
   logger.info(f'{line = }')
   
@@ -139,8 +140,7 @@ async def getPreview(res, medias, full_text, time):
       grid-row-end: span 2;
     }
     
-    .medias:has(> .media:nth-child(4)) > .media {
-      grid-column-end: span 1;
+    .medias:has(> .media:nth-child(4)) > .media:nth-child(1) {
       grid-row-end: span 1;
     }
     
