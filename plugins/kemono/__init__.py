@@ -13,7 +13,7 @@ from plugin import handler, button_handler
 from .data_source import parseKidMsg, parsePage
 
 
-private_pattern = r"(?:(?:https://)?kemono\.(?:party|su)/)?([^/]+)(?:/user)?/(\d+)(?:/post)?/(\d+)"
+private_pattern = r"(?:(?:https://)?kemono\.(?:party|su)/)?([a-z]+)(?:(?:/user)?/(\d+))?(?:/post)?/(\d+)"
 @handler('kid',
   private_pattern="^"+private_pattern,
   pattern="^kid " + private_pattern,
@@ -37,9 +37,11 @@ async def kid(update, context, text):
   _kid = match.group(3)
   #logger.info(_kid)
   arr = _kid.split('/')
-  kid = f'https://kemono.su/{source}/user/{uid}/post/{_kid}' 
+  kid = f'https://kemono.su/{source}'
+  if uid: kid += f'/user/{uid}'
+  kid += f'/post/{_kid}' 
   mid = await update.message.reply_text(
-      "请等待...", reply_to_message_id=update.message.message_id
+    "请等待...", reply_to_message_id=update.message.message_id
   )
   r = await util.get(kid)
   if r.status_code != 200:
