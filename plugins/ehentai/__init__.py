@@ -11,6 +11,7 @@ from telegram.ext import ContextTypes
 from uuid import uuid4
 from bs4 import BeautifulSoup
 import ujson as json
+from datetime import datetime
 
 import config
 import util
@@ -20,9 +21,10 @@ from .data_source import parseEidSMsg, parseEidGMsg, parsePage
 from util.progress import Progress
 
 
+private_pattern = r'(?:https?://)?(e[x-])hentai\.org/([sg])/([0-9a-z]+)/([0-9a-z-]+)'
 @handler('eid',
-  private_pattern=r"https?://e[x-]hentai.org/[sg]/.*",
-  pattern=r"eid https?://e[x-]hentai.org/[sg]/.*",
+  private_pattern=private_pattern,
+  pattern=r"eid "+private_pattern,
   info="e站爬取 /eid <url> [hide] [mark]"
 )
 async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
@@ -39,12 +41,12 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
       nocache = True
   logger.info(f"text: {text}, mark: {mark}")
 
-  match = re.match(r"https?://e[x-]hentai.org/[sg]/.*", text)
-  if not match:
+  if not (match := re.search(private_pattern, text)):
     return await update.message.reply_text("请输入e站 url")
-
+  
+  arr = [match.group(i) for i in range(1, 5)]
   # 单页图片
-  if "hentai.org/s/" in text:
+  if arr[1] == "s":
     r = await util.get(text, headers=config.ex_headers, proxy=True)
     html = r.text
     if "Your IP address has been" in html:
@@ -66,7 +68,7 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         return update.message.reply_text("媒体发送失败")
 
   # 画廊
-  if "hentai.org/g/" in text:
+  if arr[1] == "g":
     mid = await update.message.reply_text(
         "请等待...", reply_to_message_id=update.message.message_id
     )
@@ -80,8 +82,11 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     soup = BeautifulSoup(html0, "html.parser")
     title, num, magnets = await parseEidGMsg(text, soup)
     
+    now = datetime.now()
+    key = '/'.join(arr) + f'.{now:%Y.%m.%d}'
+    logger.info(key)
     with util.Data('urls') as data:
-      if not (url := data[text]) or nocache:
+      if not (url := data[key]) or nocache:
         bar = Progress(context.bot, mid)
         url = await parsePage(text, soup, title, num, nocache, bar)
         if not url:
@@ -90,7 +95,7 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
             message_id=mid.message_id,
             text='获取失败',
           )
-        data[text] = url
+        data[key] = url
     
     msg = (
       f'标题: <code>{title}</code>\n'

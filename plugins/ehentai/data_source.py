@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import asyncio
 import re 
 import ujson as json
+import traceback
 
 import util
 import config
@@ -97,6 +98,19 @@ async def parsePage(text, soup, title, num, nocache=False, bar=None):
     html1 = r.text
     soup1 = BeautifulSoup(html1, "html.parser")
     url = soup1.select("#i3 img")[0].attrs["src"]
+    try:
+      r0 = await util.get(url, headers=dict(config.ex_headers, **{'referer': text}))
+      r = await util.post(
+        'https://telegra.ph/upload',
+        files={
+          'file': r0.content
+        }
+      )
+      url0 = r.json()[0]['src']
+    except:
+      logger.warning(traceback.format_exc())
+    else:
+      url = url0
     if bar is not None:
       bar.add(100//len(urls))
     return {

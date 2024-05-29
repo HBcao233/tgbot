@@ -28,14 +28,18 @@ async def getVideo(bvid, aid, cid):
   
   video_url = None
   audio_url = None
-  for i in videos:
-    if i['id'] == 64:
-      video_url = i['base_url']
-      break
-  for i in audios:
-    if i['id'] == 30216:
-      audio_url = i['base_url']
-      break
+  if audios is None:
+    video_url = videos
+  else:
+    for i in videos:
+      if i['id'] == 64:
+        video_url = i['base_url']
+        break
+    for i in audios:
+      if i['id'] == 30216:
+        audio_url = i['base_url']
+        break
+  
   #v_md5 = util.md5sum(video_url)
   #a_md5 = util.md5sum(audio_url)
   result = await asyncio.gather(
@@ -49,13 +53,20 @@ async def getVideo(bvid, aid, cid):
     ),
   ) 
   path = util.getCache(f'{bvid}.mp4')
+  command = ['ffmpeg', '-i', result[0]]
+  if result[1] != '':
+    command.extend(['-i', result[1]])
+  command.extend(['-c:v', 'copy', '-c:a', 'copy', '-y', path])
+  logger.info(f'{command = }')
   proc = await asyncio.create_subprocess_exec(
-    'ffmpeg', '-i', result[0], '-i', result[1], '-c:v', 'copy', '-c:a', 'copy', '-y', path,
+    *command,
     stdout=asyncio.subprocess.PIPE, 
     stdin=asyncio.subprocess.PIPE,
     stderr=asyncio.subprocess.PIPE
   )
-  await proc.wait()
+  stdout, stderr = await proc.communicate()
+  if proc.returncode != 0 and stderr: 
+    logger.warning(stderr.decode('utf8'))
   return open(path, 'rb')
 
 
@@ -79,7 +90,9 @@ async def _get(aid, cid):
   )
   logger.info(r.text)
   res = r.json()['data']
-  return res['dash']['video'], res['dash']['audio']
+  if 'dash' in res:
+    return res['dash']['video'], res['dash']['audio']
+  return res['durl'][0]['url'], None
   
 dalvikVer = "2.1.0"
 osVer = "11"

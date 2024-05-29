@@ -28,7 +28,7 @@ from plugin import handler, inline_handler, button_handler
 from .data_source import getVideo
 
 
-_pattern = r"(?:^|bilibili\.com/video/)(av\d{1,11}|BV[0-9a-zA-Z]{8,12})|(?:b23\.tv/((?![0-9]{7,7})[0-9a-zA-Z]{7,7}))"
+_pattern = r"(?:^|bilibili\.com/video/)(av\d{1,11}|BV[0-9a-zA-Z]{8,12})|(?:b23\.tv\\?/((?![0-9]{7,7})[0-9a-zA-Z]{7,7}))"
 @handler('bili', 
   private_pattern=_pattern,
   info="av号或bv号获取视频"

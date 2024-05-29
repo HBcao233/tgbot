@@ -83,6 +83,8 @@ async def getImg(
     Returns:
         str: 图片路径
     """
+    if url is None or url == '': 
+      return ''
     if not os.path.exists('data/cache'): os.makedirs('data/cache')
     b = isinstance(url, bytes)
     url_tip = f'{url if not b else ""}{"bytes" if b else ""}'
