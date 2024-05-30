@@ -45,3 +45,7 @@ google-chrome --version
 Rename `config.py.example` to `config.py`, and edit it by notes
 
 token 必填，获取方法自行搜索 Telegram Bot Token
+
+
+## 鸣谢
+* [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
