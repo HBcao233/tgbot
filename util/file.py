@@ -5,6 +5,8 @@ import config
 def getFile(dir_name='', name=''):
   name = str(name)
   path = os.path.join(config.botRoot, dir_name)
+  if name == '':
+    return path
   f = ''
   for i in os.listdir(path):
     if os.path.splitext(i)[0] == name:
@@ -20,6 +22,9 @@ def getResource(name=''):
   return getFile('resources/', name)
   
 def getDataFile(name=''):
+  path = getFile("data/")
+  if not os.path.isdir(path):
+    os.mkdir(path)
   return getFile("data/", name)
   
 def getCache(name=''):

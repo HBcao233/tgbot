@@ -9,7 +9,8 @@ def getData(file: str) -> dict:
     setData(file, dict())
   with open(path, 'r') as f:
     data = f.read()
-    if data == '': data = '{}'
+    if data == '': 
+      return {}
     data = json.loads(data)
     return data
     
@@ -23,11 +24,36 @@ class Data(object):
     self.file = file
     self.data = getData(file)
     
+  def __str__(self):
+    return 'Data' + str(self.data)
+    
+  def __repr__(self):
+    return 'Data' + repr(self.data)
+  
+  def __contains__(self, key):
+    return key in self.data
+  
+  def __len__(self):
+    return len(self.data)
+    
   def __getitem__(self, key, default=None):
     return self.data.get(key, default)
     
   def __setitem__(self, key, value):
     self.data[key] = value
+  
+  def __delitem__(self, key):
+    print(f'del data {key}')
+    self.data.pop(key)
+  
+  def keys(self):
+    return self.data.keys()
+    
+  def items(self):
+    return self.data.items()
+    
+  def values(self):
+    return self.data.values()
     
   def save(self):
     setData(self.file, self.data)
