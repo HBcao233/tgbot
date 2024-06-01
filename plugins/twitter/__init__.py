@@ -172,8 +172,8 @@ async def _(update, context, text):
         InlineQueryResultCachedPhoto(
             id=str(uuid4()),
             photo_file_id=photo_file_id,
-            caption=msg,
-            parse_mode="HTML",
+            # caption=msg,
+            # parse_mode="HTML",
         )
     )
   

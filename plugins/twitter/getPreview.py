@@ -57,8 +57,10 @@ async def getPreview(res, medias, full_text, time):
     * {
      padding: 0;
      margin: 0;
-     font-family: SimSun;
+     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
      font-size: 50px;
+     color: rgb(15, 20, 25);
+     font-weight: 400;
     }
     .tweet { 
       width: 100vw; 
@@ -94,16 +96,20 @@ async def getPreview(res, medias, full_text, time):
       text-overflow: ellipsis;
     }
     .userinfo .nickname {
-      font-weight: bold;
+      font-weight: 700;
+    }
+    .userinfo .username {
+      color: rgb(83, 100, 113);
     }
     .body {
       padding: 0 10px;
-      margin-top: 20px;
+      margin-top: 40px;
+      font-weight: 500;
     }
     .medias {
-      margin-top: 20px;
+      margin-top: 40px;
       width: 100%;
-      height: 800px;
+      height: 1200px;
       overflow: hidden;
       border-radius: 50px;
       font-size: 0;
@@ -156,9 +162,9 @@ async def getPreview(res, medias, full_text, time):
       margin: 0;
     }
     .time {
-      margin-top: 10px;
+      margin-top: 20px;
       font-size: 40px;
-      color: #333;
+      color: rgb(83, 100, 113);
     }
     </style></head>'''
     f'''<body>
@@ -180,6 +186,6 @@ async def getPreview(res, medias, full_text, time):
   )
   filename = f"t{tid}.jpg"
   f = util.getCache(filename)  
-  html2image.screenshot(html, f, (1200, 1150+line*60)) 
+  html2image.screenshot(html, f, (1200, 1600+line*60)) 
   return f
   

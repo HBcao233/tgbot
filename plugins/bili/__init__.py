@@ -111,8 +111,6 @@ async def _(update, context, text):
     
     if not (info := data.get(bvid, None)) or nocache:
       info = await getVideo(bvid, aid, res['cid'])
-    else:
-      info = info.split('/')
     video, duration, width, height, thumbnail = tuple(info)
       
     m1 = await bot.send_video(
@@ -132,8 +130,7 @@ async def _(update, context, text):
       pool_timeout=60,
     )
     v = m1.video
-    vv = map(str, [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id])
-    data[bvid] = '/'.join(vv)
+    data[bvid] = [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id]
     data.save()
   except Exception:
     logger.error(traceback.print_exc())
