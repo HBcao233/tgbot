@@ -1,5 +1,7 @@
 import asyncio
 import httpx
+import cv2
+from functools import cmp_to_key
 import base64
 import gzip
 import struct
@@ -20,6 +22,26 @@ from .app import (
 from google.protobuf.json_format import MessageToDict
 
 
+qn = 64
+
+def _cmp(x, y):
+  if x['id'] > qn:
+    return 1
+  if y['id'] > qn:
+    return -1
+  if x['id'] == y['id'] == qn:
+    if x['codecid'] == 12:
+      return -1
+    if y['codecid'] == 12:
+      return 1
+    return 0
+  if x['id'] < y['id']:
+    return 1
+  if x['id'] > y['id']:
+    return -1
+  return 0
+  
+  
 async def getVideo(bvid, aid, cid):
   if config.bili_access_token == '':
     videos, audios = await _get(aid, cid)
@@ -31,10 +53,10 @@ async def getVideo(bvid, aid, cid):
   if audios is None:
     video_url = videos
   else:
-    for i in videos:
-      if i['id'] == 64:
-        video_url = i['base_url']
-        break
+    # _videos = list(filter(lambda x: x['id']==qn, videos))
+    videos = sorted(videos, key=cmp_to_key(_cmp))
+    logger.info(f"qn: {videos[0]['id']}, codecid: {videos[0]['codecid']}")
+    video_url = videos[0]['base_url']
     for i in audios:
       if i['id'] == 30216:
         audio_url = i['base_url']
@@ -67,7 +89,24 @@ async def getVideo(bvid, aid, cid):
   stdout, stderr = await proc.communicate()
   if proc.returncode != 0 and stderr: 
     logger.warning(stderr.decode('utf8'))
-  return open(path, 'rb')
+  
+  cap = cv2.VideoCapture(path)
+  rate = cap.get(5)
+  frame_count = cap.get(7)
+  duration = frame_count / rate
+  width = cap.get(3)
+  height = cap.get(4)
+  ret, img = cap.read(1)
+  h, w, channels = img.shape
+  if w >= h:
+    size = (320, int(320 * h / w))
+  else:
+    size = (int(320 * w / h), 320)
+  img = cv2.resize(img, size)
+  thumbnail = util.getCache(bvid + '_thumbnail.jpg')
+  cv2.imwrite(thumbnail, img)
+  cap.release()
+  return open(path, 'rb'), duration, width, height, open(thumbnail, 'rb')
 
 
 async def _get(aid, cid):
@@ -76,7 +115,7 @@ async def _get(aid, cid):
   params = {
     'fnver': 0,
     'fnval': 16,
-    'qn': 80,
+    'qn': qn,
     'avid': aid,
     'cid': cid,
   }
@@ -93,6 +132,7 @@ async def _get(aid, cid):
   if 'dash' in res:
     return res['dash']['video'], res['dash']['audio']
   return res['durl'][0]['url'], None
+  
   
 dalvikVer = "2.1.0"
 osVer = "11"
@@ -131,7 +171,7 @@ async def _post(aid, cid):
   data = PlayViewReq(
     epId=aid,
     cid=cid,
-    qn=80,
+    qn=qn,
     fnval=16,
     spmid="pgc.pgc-video-detail.0.0",
     fromSpmid="default-value",

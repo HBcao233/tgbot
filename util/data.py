@@ -45,6 +45,9 @@ class Data(object):
   def __delitem__(self, key):
     print(f'del data {key}')
     self.data.pop(key)
+    
+  def get(self, key, default=None):
+    return self.data.get(key, default)
   
   def keys(self):
     return self.data.keys()

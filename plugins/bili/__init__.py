@@ -105,14 +105,23 @@ async def _(update, context, text):
   )
   
   try:
-    data = util.getData('videos')
+    data = util.Videos()
     # logger.info(data)
     logger.info(f'bvid: {bvid} video: '+str(data.get(bvid, None)))
-    if not (video := data.get(bvid, None)) or nocache:
-      video = await getVideo(bvid, aid, res['cid'])
+    
+    if not (info := data.get(bvid, None)) or nocache:
+      info = await getVideo(bvid, aid, res['cid'])
+    else:
+      info = info.split('/')
+    video, duration, width, height, thumbnail = tuple(info)
       
     m1 = await bot.send_video(
       video=video,
+      duration=int(duration),
+      width=int(width),
+      height=int(height),
+      thumbnail=thumbnail,
+      supports_streaming=True,
       caption=msg, 
       chat_id=message.chat.id,
       reply_to_message_id=message.message_id,
@@ -122,9 +131,10 @@ async def _(update, context, text):
       connect_timeout=60,
       pool_timeout=60,
     )
-    if not data.get(bvid, None):
-      data[bvid] = m1.video.file_id
-      util.setData('videos', data)
+    v = m1.video
+    vv = map(str, [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id])
+    data[bvid] = '/'.join(vv)
+    data.save()
   except Exception:
     logger.error(traceback.print_exc())
     await bot.send_message(
