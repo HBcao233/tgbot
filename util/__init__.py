@@ -8,6 +8,7 @@ from .file import getFile
 from .file import getResource
 from .file import getDataFile
 from .file import getCache
+from .file import videoInfo
 
 from .data import getData
 from .data import setData

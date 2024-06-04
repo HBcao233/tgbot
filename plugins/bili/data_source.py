@@ -1,6 +1,5 @@
 import asyncio
 import httpx
-import cv2
 from functools import cmp_to_key
 import base64
 import gzip
@@ -90,24 +89,7 @@ async def getVideo(bvid, aid, cid):
   if proc.returncode != 0 and stderr: 
     logger.warning(stderr.decode('utf8'))
   
-  cap = cv2.VideoCapture(path)
-  rate = cap.get(5)
-  frame_count = cap.get(7)
-  duration = frame_count / rate
-  width = cap.get(3)
-  height = cap.get(4)
-  ret, img = cap.read(1)
-  h, w, channels = img.shape
-  if w >= h:
-    size = (320, int(320 * h / w))
-  else:
-    size = (int(320 * w / h), 320)
-  img = cv2.resize(img, size)
-  thumbnail = util.getCache(bvid + '_thumbnail.jpg')
-  cv2.imwrite(thumbnail, img)
-  cap.release()
-  return open(path, 'rb'), duration, width, height, open(thumbnail, 'rb')
-
+  return util.videoInfo(path)
 
 async def _get(aid, cid):
   url = 'https://api.bilibili.com/x/player/wbi/playurl'

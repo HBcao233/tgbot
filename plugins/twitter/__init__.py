@@ -63,7 +63,7 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     # 格式化媒体
     medias = parseMedias(tweet)
     ms = []
-    videos = util.getData('videos')
+    videos = util.Data('videos')
     for media in medias:
       if media["type"] == "photo":
         url = media["url"]
@@ -84,18 +84,24 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
       else:
         url = media["url"]
         md5 = media['md5']
-        if not (video := videos.get(md5, None)):
-          img = await util.getImg(
+        if not (info := videos.get(md5, None)):
+          path = await util.getImg(
             url, 
             headers=config.twitter_headers, 
             ext="mp4"
           )
-          video = open(img, 'rb')
+          info = util.videoInfo(path)
+        video, duration, width, height, thumbnail = tuple(info)
         add = InputMediaVideo(
           media=video,
           caption=msg if len(ms) == 0 else None,
           parse_mode="HTML",
           has_spoiler=mark,
+          duration=int(duration),
+          width=int(width),
+          height=int(height),
+          thumbnail=thumbnail,
+          supports_streaming=True,
         )
         ms.append(add)
     
@@ -124,9 +130,10 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         #  photos[md5s[i]] = ai.photo[-1].file_id
         
         if getattr(ai, 'video', None) and not videos.get(md5, None):
-          videos[md5] = ai.video.file_id
+          v = ai.video
+          videos[md5] = [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id]
       # util.setData('photos', photos)
-      util.setData('videos', videos)
+      videos.save()
     except Exception:
       logger.info(msg)
       logger.info(json.dumps(res))

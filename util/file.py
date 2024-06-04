@@ -1,5 +1,7 @@
 import os.path
 import config
+import cv2
+import time 
 
 
 def getFile(dir_name='', name=''):
@@ -29,3 +31,25 @@ def getDataFile(name=''):
   
 def getCache(name=''):
   return getFile("data/cache/", name)
+
+
+def videoInfo(path):
+  cap = cv2.VideoCapture(path)
+  rate = cap.get(5)
+  frame_count = cap.get(7)
+  duration = frame_count / rate
+  width = cap.get(3)
+  height = cap.get(4)
+  ret, img = cap.read(1)
+  h, w, channels = img.shape
+  if w >= h:
+    size = (320, int(320 * h / w))
+  else:
+    size = (int(320 * w / h), 320)
+  img = cv2.resize(img, size)
+  thumbnail = getCache(f'{round(time.time())}.jpg')
+  cv2.imwrite(thumbnail, img)
+  cap.release()
+  _thumbnail = open(thumbnail, 'rb')
+  os.remove(thumbnail)
+  return open(path, 'rb'), duration, width, height, _thumbnail
