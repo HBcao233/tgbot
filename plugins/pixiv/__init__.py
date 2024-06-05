@@ -88,7 +88,7 @@ async def pid(update, context, text=None):
       name = f"{pid}_p{i}"
       tip = (
           f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-          if p > 1
+          if p > 0
           else ""
       )
       if not (origin and (media := documents[name])):
@@ -100,6 +100,7 @@ async def pid(update, context, text=None):
             headers=config.pixiv_headers, 
             proxy=True, 
           )
+          util.resizePhoto(img, saveas=img)
           media = open(img, 'rb')
         except Exception:
           logger.warning(traceback.format_exc())

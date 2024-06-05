@@ -87,18 +87,14 @@ async def getImg(
       return ''
     if not os.path.exists('data/cache'): os.makedirs('data/cache')
     b = isinstance(url, bytes)
-    url_tip = f'{url if not b else ""}{"bytes" if b else ""}'
-    logger.info(f"尝试获取图片 (proxy:{proxy}, headers:{headers}) {url_tip}")
-
+    
     if not b and url.find("file://") >= 0:
-        if path is None:
-            path = url[7:]
-        if rand:
-            with open(path, "ab") as f:
-                f.write(randStr().encode())
-        logger.info(f"获取图片成功: {path}")
-        await asyncio.sleep(0.001)
-        return path
+      if path is None:
+        path = url[7:]
+      if rand:
+        with open(path, "ab") as f:
+          f.write(randStr().encode())
+      return path
 
     if b:
         if path is None:
@@ -108,10 +104,10 @@ async def getImg(
             f.write(url)
 
         if rand:
-            with open(path, "ab") as f:
-                f.write(randStr().encode())
+          with open(path, "ab") as f:
+            f.write(randStr().encode())
 
-        logger.info(f"获取图片成功: {path}")
+        logger.info(f"bytes转图片成功: {path}")
         return path
     else:
         f = ''
@@ -135,7 +131,7 @@ async def getImg(
             path = getCache(f + ex)
         
         if not os.path.isfile(path) or not cache:
-          logger.info(f'Downloading ... saveas {f}{ex}')
+          logger.info(f"尝试获取图片 {url}, proxy: {proxy}, headers: {headers} , saveas {f}{ex}")
           p = urllib.parse.urlparse(url)
           _headers = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",

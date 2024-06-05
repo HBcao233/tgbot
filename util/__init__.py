@@ -8,7 +8,10 @@ from .file import getFile
 from .file import getResource
 from .file import getDataFile
 from .file import getCache
-from .file import videoInfo
+
+from .media import videoInfo
+from .media import getPhotoThumbnail
+from .media import resizePhoto
 
 from .data import getData
 from .data import setData
@@ -32,6 +35,10 @@ __all__ = [
   'getResource',
   'getDataFile',
   'getCache',
+  
+  'videoInfo',
+  'getPhotoThumbnail',
+  'resizePhoto',
   
   'getData',
   'setData',
