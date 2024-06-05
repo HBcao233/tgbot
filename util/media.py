@@ -27,10 +27,10 @@ def getPhotoThumbnail(path, saveas=None) -> cv2.Mat:
   
   
 def resizePhoto(path, maxSize=2560, size=None, saveas=None) -> cv2.Mat:
-  if isinstance(path, cv2.Mat):
-    img = path
-  else:
+  if isinstance(path, str):
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+  else:
+    img = path
   h, w, channels = img.shape
   if size is None:
     if w >= h:
