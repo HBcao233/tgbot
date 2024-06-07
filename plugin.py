@@ -22,7 +22,6 @@ class Command:
     
   def __call__(self, func):
     def wrapper(update, context, text=None, *w_args, **w_kwargs):
-        logger.info(update.message)
         if (
           text is None and 
           hasattr(update, 'message') and 
@@ -36,7 +35,6 @@ class Command:
               .replace("/start", "")
               .strip()
           )
-          # logger.info(text)
         return func(update, context, text, *w_args, **w_kwargs)
     return wrapper
 

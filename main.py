@@ -164,7 +164,8 @@ async def main():
 
   load_plugins('plugins')
   for i in config.commands:
-    app.add_handler(CommandHandler(i.cmd, i.func))
+    if i.cmd != '':
+      app.add_handler(CommandHandler(i.cmd, i.func))
   
   app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL | filters.AUDIO, echo))
   app.add_handler(MessageHandler(filters.TEXT, handle))

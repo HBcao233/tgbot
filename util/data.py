@@ -66,6 +66,10 @@ class Data(object):
     
   def __exit__(self, type, value, trace):
     self.save()
+    
+  def __iter__(self):
+    return iter(self.data)
+    
 
 class Photos(Data):
   def __init__(self):

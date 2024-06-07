@@ -46,8 +46,11 @@ async def _(update, context, text):
   
   arr = text.split(' ')
   nocache = False
+  mark = False
   if 'nocache' in arr:
     nocache = True
+  if 'mark' in arr:
+    mark = True
   
   match = re.search(_pattern, text)
   if match.group(2):
@@ -121,6 +124,7 @@ async def _(update, context, text):
       thumbnail=thumbnail,
       supports_streaming=True,
       caption=msg, 
+      has_spoiler=mark,
       chat_id=message.chat.id,
       reply_to_message_id=message.message_id,
       parse_mode="HTML",

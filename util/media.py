@@ -33,11 +33,13 @@ def resizePhoto(path, maxSize=2560, size=None, saveas=None) -> cv2.Mat:
     img = path
   h, w, channels = img.shape
   if size is None:
-    if w >= h:
-      size = (maxSize, int(maxSize * h / w))
-    else:
-      size = (int(maxSize * w / h), maxSize)
-  img = cv2.resize(img, size)
+    if w > maxSize or h > maxSize:
+      if w >= h:
+        size = (maxSize, int(maxSize * h / w))
+      elif h > w:
+        size = (int(maxSize * w / h), maxSize)
+  if size is not None: 
+    img = cv2.resize(img, size)
   if channels == 4:
     white = np.zeros(img.shape, dtype='uint8') 
     img = cv2.add(img, white)

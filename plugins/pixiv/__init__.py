@@ -71,23 +71,24 @@ async def pid(update, context, text=None):
   #imgUrl = imgUrl.replace("i.pximg.net", "i.pixiv.re")
 
   count = res["body"]["pageCount"]
-  pcount = (count - 1) // 9 + 1
+  piece = 10
+  pcount = (count - 1) // piece + 1
   bot = context.bot
   
   async def _m():
     nonlocal origin, mid, bot, imgUrl, update, count, pcount
     bar = Progress(
       bot, mid, 
-      "正在获取 p" + f"{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}",
+      "正在获取 p" + f"{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}",
     )
     ms = []
     documents = util.Documents()
-    i = p * 9
-    while i < min((p + 1) * 9, count):
+    i = p * piece
+    while i < min((p + 1) * piece, count):
       url = imgUrl.replace("_p0", f"_p{i}")
       name = f"{pid}_p{i}"
       tip = (
-          f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
+          f"\n{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}"
           if p > 0
           else ""
       )
@@ -110,7 +111,7 @@ async def pid(update, context, text=None):
           )
           return False
         else:
-          bar.add(80//(min((p + 1) * 9, count) - p * 9))
+          bar.add(90 // min(piece, count - p * piece))
       
       caption = (
         (msg if i == 0 else "") + tip
@@ -149,8 +150,8 @@ async def pid(update, context, text=None):
         pool_timeout=120,
       )
       if origin:
-        for i in range(0, min(9, count)):
-          ii = p * 9 + i
+        for i in range(0, min(piece, count - p * piece)):
+          ii = p * piece + i
           name = f"{pid}_p{ii}"
           documents[name] = m[i].document.file_id
         documents.save()
@@ -162,8 +163,8 @@ async def pid(update, context, text=None):
       logger.info(msg)
       await update.message.reply_text(
         (
-          f"\n{p * 9 + 1} ~ {min((p + 1) * 9, count)} / {count}"
-          if min((p + 1) * 9, count) != 1
+          f"\n{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}"
+          if min((p + 1) * piece, count) != 1
           else ""
         )
         + "发送失败",
@@ -195,60 +196,6 @@ async def pid(update, context, text=None):
       "获取完成", 
       reply_to_message_id=update.message.message_id,
       reply_markup=reply_markup,
-  )
-
-
-@inline_handler(r"((^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
-                r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?((pid|Pid|PID) ?)?\d{6,12}))" + _end)
-async def _(update, context, query):
-  text = query
-
-  results = []
-  pid, hide, mark, origin = parseText(text)
-  if pid == "":
-      return
-
-  r = await util.get(
-      f"https://www.pixiv.net/ajax/illust/{pid}",
-      proxy=True,
-      headers=config.pixiv_headers,
-  )
-  res = r.json()
-  if res["error"]:
-      return await update.inline_query.answer([])
-  msg = parsePidMsg(res["body"], hide)
-
-  imgUrl = res["body"]["urls"]["original"]
-  thumbUrl = res["body"]["urls"]["thumb"]
-  for i in range(0, res["body"]["pageCount"]):
-      url = imgUrl.replace("_p0", f"_p{i}").replace(
-          "i.pximg.net", "i.pixiv.re")
-      turl = thumbUrl.replace("_p0", f"_p{i}").replace(
-          "i.pximg.net", "i.pixiv.re"
-      )
-      results.append(
-          InlineQueryResultPhoto(
-              id=str(uuid4()),
-              photo_url=url,
-              thumbnail_url=turl,
-              caption=msg,
-              parse_mode="HTML",
-          )
-      )
-
-  countFlag = len(results) > 1
-  btn_text = "获取" + ("遮罩" if mark else "全部") + ("原图" if origin else "图片") + ("(隐藏描述)" if hide else "")
-  start_parameter = f"{pid}_{'hide' if hide else ''}_{'mark' if mark else ''}_{'origin' if origin else ''}"
-  logger.info(f"btn_text: {btn_text}, start: {start_parameter}")
-  
-  button = InlineQueryResultsButton(
-    text=btn_text,
-    start_parameter=start_parameter,
-  ) if countFlag or mark else None
-  await update.inline_query.answer(
-    results,
-    cache_time=10,
-    button=button,
   )
   
   
