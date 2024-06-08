@@ -36,15 +36,15 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     logger.info(f"{tid = }, {hide = }, {mark = }")
     
     if tid == "":
-        return await update.message.reply_text(
-            "用法: /tid <url/tid> [hide] [mark]\n"
-            "tid/url: 推文链接或status_id\n"
-            "hide: 隐藏信息，推文内容将只显示推文链接\n"
-            "mark: 添加遮罩\n"
-            "私聊小派魔时可以省略/tid，直接发送<url/tid> [hide] [mark]哦\n"
-            "或者使用@hbcao1bot <url/tid> [hide] [mark]作为内联模式发送~",
-            reply_to_message_id=update.message.message_id,
-        )
+      return await update.message.reply_text(
+          "用法: /tid <url/tid> [hide] [mark]\n"
+          "tid/url: 推文链接或status_id\n"
+          "hide: 隐藏信息，推文内容将只显示推文链接\n"
+          "mark: 添加遮罩\n"
+          "私聊小派魔时可以省略/tid，直接发送<url/tid> [hide] [mark]哦\n"
+          "或者使用@hbcao1bot <url/tid> [hide] [mark]作为内联模式发送~",
+          reply_to_message_id=update.message.message_id,
+      )
 
     res = await get_twitter(tid)
     if type(res) == str:
@@ -56,10 +56,8 @@ async def tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     msg, full_text, time = parseTidMsg(res) 
     msg = msg if not hide else 'https://x.com/i/status/' + tid
     tweet = res["legacy"]
-    '''
-    if "extended_entities" not in tweet:
-        return await update.message.reply_text(msg, parse_mode='HTML')
-    '''
+    
+    await update.message.reply_chat_action(action='upload_photo')
     # 格式化媒体
     medias = parseMedias(tweet)
     ms = []

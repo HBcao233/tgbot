@@ -1,4 +1,8 @@
 import re
+import asyncio
+import util
+import config
+import os.path
 from util import logger
 
 
@@ -74,3 +78,45 @@ def parsePidMsg(res, hide=False):
     msg += comment
   
   return msg
+
+
+async def getAnime(pid):
+  name = f'{pid}_ugoira'
+  url = f"https://www.pixiv.net/ajax/illust/{pid}/ugoira_meta"
+  r = await util.get(url, headers=config.pixiv_headers)
+  res = r.json()['body']
+  frames = res['frames']
+  if not os.path.isdir(util.getCache(name+"/")):
+    zi = await util.getImg(
+      res['src'], 
+      saveas=name, 
+      ext='zip',
+      headers=config.pixiv_headers
+    )
+    proc = await asyncio.create_subprocess_exec('unzip', '-o', '-d', util.getCache(name+"/"), zi)
+    await proc.wait()
+  
+  f = frames[0]['file']
+  f, ext = os.path.splitext(f)
+  rate = str(round(1000 / frames[0]['delay'], 2))
+  img = util.getCache(f'{pid}.mp4')
+  command = [
+    'ffmpeg', '-framerate', rate, '-loop', '0', '-f', 'image2',
+    '-i', util.getCache(name + f'/%{len(f)}d{ext}'), 
+    '-r', rate, '-c:v', 'h264', '-pix_fmt', 'yuv420p', '-vf', "pad=ceil(iw/2)*2:ceil(ih/2)*2", '-y', img
+  ]
+  # logger.info(f'command: {command}')
+  proc = await asyncio.create_subprocess_exec(
+    *command,
+    stdout=asyncio.subprocess.PIPE, 
+    stdin=asyncio.subprocess.PIPE,
+    stderr=asyncio.subprocess.PIPE
+  )
+  stdout, stderr = await proc.communicate()
+  if proc.returncode != 0 and stderr: 
+    logger.warning(stderr.decode('utf8'))
+    return False
+  
+  logger.info(f'生成动图成功: {img}')
+  return img
+  

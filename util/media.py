@@ -13,7 +13,8 @@ def videoInfo(path):
   duration = frame_count / rate
   width = cap.get(3)
   height = cap.get(4)
-  ret, img = cap.read(1)
+  cap.set(cv2.CAP_PROP_POS_FRAMES, 1)
+  ret, img = cap.read()
   thumbnail = getCache(f'{round(time.time())}.jpg')
   getPhotoThumbnail(img, saveas=thumbnail)
   cap.release()

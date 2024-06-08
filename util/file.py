@@ -5,8 +5,12 @@ import config
 def getFile(dir_name='', name=''):
   name = str(name)
   path = os.path.join(config.botRoot, dir_name)
+  if '/' in name:
+    p, name = os.path.split(name)
+    path = os.path.join(path, p)
   if name == '':
     return path
+    
   f = ''
   for i in os.listdir(path):
     if os.path.splitext(i)[0] == name:
