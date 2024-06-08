@@ -65,6 +65,7 @@ async def _pixiv(update, context, text=None):
   res = res['body']
   msg = parsePidMsg(res, hide)
   if res['illustType'] == 2:
+    origin = False
     await message.reply_chat_action(action='upload_video')
     animations = util.Data('animations')
     if not (info := animations[pid]):
@@ -84,6 +85,7 @@ async def _pixiv(update, context, text=None):
       thumbnail=thumbnail,
       caption=msg,
       parse_mode='HTML',
+      has_spoiler=mark,
       reply_to_message_id=update.message.message_id,
     )
     v = m.animation
@@ -191,11 +193,12 @@ async def _pixiv(update, context, text=None):
         )
   
   keyboard = [[]]
-  if not origin and res['illustType'] != 2:
-    keyboard[0].append(InlineKeyboardButton(
-      "获取原图", 
-      callback_data=f"{pid} {'hide' if hide else ''} origin"
-    ))
+  if not origin:
+    if res['illustType'] != 2:
+      keyboard[0].append(InlineKeyboardButton(
+        "获取原图", 
+        callback_data=f"{pid} {'hide' if hide else ''} origin"
+      ))
     if not mark:
       keyboard[0].append(InlineKeyboardButton(
         "添加遮罩", 
