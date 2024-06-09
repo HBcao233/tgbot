@@ -10,24 +10,6 @@ import util
 from util.log import logger
 
 
-def parseText(text):
-  hide = False
-  mark = False
-  args = text.split(" ")
-  if len(args) >= 2:
-    if "hide" in args:
-      hide = True
-    if "mark" in args or '遮罩' in args:
-      mark = True
-  tid = re.sub(
-      r"tid|Tid|TID", "", text
-  ).strip()
-  tid = re.sub(
-    r"(https?://)?(twitter|x|vxtwitter|fxtwitter).com/.*/status/(\d{13,})/?.*", r"\3", tid
-  ).strip()
-  return tid, hide, mark
- 
-
 async def get_twitter(tid):
     url = "https://twitter.com/i/api/graphql/NmCeCgkVlsRGS1cAwqtgmw/TweetDetail"
     variables = {

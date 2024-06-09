@@ -197,17 +197,18 @@ async def _pixiv(update, context, text=None):
     if res['illustType'] != 2:
       keyboard[0].append(InlineKeyboardButton(
         "获取原图", 
-        callback_data=f"{pid} {'hide' if hide else ''} origin"
+        callback_data=f"pid {pid} {'hide' if hide else ''} origin"
       ))
     if not mark:
       keyboard[0].append(InlineKeyboardButton(
         "添加遮罩", 
-        callback_data=f"{pid} {'hide' if hide else ''} mark"
+        callback_data=f"pid {pid} {'hide' if hide else ''} mark"
       ))
   
-  keyboard[0].append(
-    InlineKeyboardButton("详细描述" if hide else "简略描述", callback_data=f"{pid} {'hide' if not hide else ''} {'origin' if origin else ''}")
-  )
+  keyboard[0].append(InlineKeyboardButton(
+    "详细描述" if hide else "简略描述", 
+    callback_data=f"pid {pid} {'hide' if not hide else ''} {'origin' if origin else ''}"
+  ))
   reply_markup = InlineKeyboardMarkup(keyboard)
   await update.message.reply_text(
     "获取完成", 
@@ -216,7 +217,7 @@ async def _pixiv(update, context, text=None):
   )
   
   
-@button_handler(pattern=r"^\d{6,12}")
+@button_handler(pattern=r"^pid \d{6,12}")
 async def _(update, context, query):
   # logger.info(update)
   message = update.callback_query.message

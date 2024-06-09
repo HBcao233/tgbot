@@ -52,7 +52,7 @@ def parsePidMsg(res, hide=False):
   if res['illustType'] == 2:
     props.append('#动图')
   if res['aiType'] == 2:
-      props.append('#AI作品')
+      props.append('#AI生成')
   prop = ' '.join(props)
   if prop != '':
       prop += '\n'
