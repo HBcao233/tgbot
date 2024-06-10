@@ -8,6 +8,7 @@ from telegram import (
   InputMediaPhoto,
   InputMediaDocument,
 )
+import re
 
 import config
 import util
@@ -15,20 +16,17 @@ from util.log import logger
 from util.progress import Progress
 from plugin import handler, inline_handler, button_handler
 
-from .data_source import parseText, parsePidMsg, getAnime
+from .data_source import parsePidMsg, getAnime
 
 
-_end = r'/?(\?.*)?(#.*)?( .*)?$'
+_pattern = r'(?:https?://)?(?:www\.)?(?:pixiv\.net/(?:member_illust\.php\?.*illust_id=|artworks/|i/))?(\d{6,12})(?:[^0-9].*)?$'
 @handler('pid', 
-  private_pattern=r"((^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
-                  r"(^((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}))" + _end,
-  pattern=r"((^((pid|Pid|PID) ?)(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=\d{6,12})|"
-          r"(^((pid|Pid|PID) ?)((https?://)?(www.)?pixiv.net/(artworks|i)/)?\d{6,12}))/?(\?.*)?(#.*)?$",
+  private_pattern='^' + _pattern,
+  pattern=r"^(?:pid|Pid|PID) ?" + _pattern,
   info="获取p站作品 /pid <url/pid> [hide] [mark]"
 )
 async def _pixiv(update, context, text=None):
-  pid, hide, mark, origin = parseText(text)
-  if pid == "":
+  if not (match := re.match(r'(?:pid|Pid|PID)? ?' +_pattern, text)):
     return await update.message.reply_text(
         "用法: /pid <url/pid> [hide/省略] [mark/遮罩] [origin/原图]\n"
         "url/pid: p站链接或pid\n"
@@ -39,7 +37,20 @@ async def _pixiv(update, context, text=None):
         "或者使用@hbcao1bot <url/pid>作为内联模式发送~",
         reply_to_message_id=update.message.message_id,
     )
+  pid = match.group(1)
     
+  hide = False
+  mark = False
+  origin = False
+  arr = text.split(" ")
+  if "hide" in arr or '省略' in arr: 
+    hide = True
+  if "mark" in arr or '遮罩' in arr: 
+    mark = True
+  if 'origin' in arr or '原图' in arr: 
+    origin = True
+  logger.info(f"{pid = }, {hide = }, {mark = }, {origin = }")
+  
   message = update.message
   bot = context.bot
   
@@ -94,13 +105,15 @@ async def _pixiv(update, context, text=None):
     await bot.delete_message(
       chat_id=message.chat.id, message_id=mid.message_id
     )
+    
   else:
-  
     imgUrl = res["urls"]["original"]
     count = res["pageCount"]
     piece = 10
     pcount = (count - 1) // piece + 1
-      
+    
+    photos = util.Photos()
+    documents = util.Documents()
     for p in range(pcount):
       await update.message.reply_chat_action(action='upload_photo')
       bar = Progress(
@@ -108,17 +121,17 @@ async def _pixiv(update, context, text=None):
         "正在获取 p" + f"{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}",
       )
       ms = []
-      documents = util.Documents()
       i = p * piece
+      t = documents if origin else photos
       while i < min((p + 1) * piece, count):
         url = imgUrl.replace("_p0", f"_p{i}")
-        name = f"{pid}_p{i}"
         tip = (
           f"\n{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}"
           if p > 0
           else ""
         )
-        if not (origin and (media := documents[name])):
+        name = f"{pid}_p{i}"
+        if not (media := t[name]):
           try:
             img = await util.getImg(
               url, 
@@ -169,12 +182,13 @@ async def _pixiv(update, context, text=None):
           connect_timeout=120,
           pool_timeout=120,
         )
-        if origin:
-          for i in range(0, min(piece, count - p * piece)):
-            ii = p * piece + i
-            name = f"{pid}_p{ii}"
-            documents[name] = m[i].document.file_id
-          documents.save()
+        
+        for i in range(0, min(piece, count - p * piece)):
+          ii = p * piece + i
+          name = f"{pid}_p{ii}"
+          tt = m[i].document if origin else m[i].photo[-1]
+          t[name] = tt.file_id
+        t.save()
       except Exception:
         logger.warning(traceback.format_exc())
         logger.info(msg)
@@ -192,23 +206,33 @@ async def _pixiv(update, context, text=None):
             reply_to_message_id=update.message.message_id,
         )
   
-  keyboard = [[]]
-  if not origin:
-    if res['illustType'] != 2:
-      keyboard[0].append(InlineKeyboardButton(
-        "获取原图", 
-        callback_data=f"pid {pid} {'hide' if hide else ''} origin"
-      ))
-    if not mark:
-      keyboard[0].append(InlineKeyboardButton(
-        "添加遮罩", 
-        callback_data=f"pid {pid} {'hide' if hide else ''} mark"
-      ))
-  
-  keyboard[0].append(InlineKeyboardButton(
-    "详细描述" if hide else "简略描述", 
-    callback_data=f"pid {pid} {'hide' if not hide else ''} {'origin' if origin else ''}"
-  ))
+  keyboard = [[
+    InlineKeyboardButton(
+      "获取原图" if not origin else '取消原图', 
+      callback_data=(
+        f"pid {pid}"
+        f" {'hide' if hide else ''}"
+        f" {'origin' if not origin else ''}"
+      ),
+    ),
+    InlineKeyboardButton(
+      "添加遮罩" if not mark else '取消遮罩', 
+      callback_data=(
+        f"pid {pid}"
+        f" {'hide' if hide else ''}"
+        f" {'mark' if not mark else ''}"
+      ),
+    ),
+    InlineKeyboardButton(
+      "详细描述" if hide else "简略描述", 
+      callback_data=(
+        f"pid {pid}"
+        f" {'hide' if not hide else ''}"
+        f" {'mark' if mark else ''}"
+        f" {'origin' if origin else ''}"
+      ),
+    ),
+  ]]
   reply_markup = InlineKeyboardMarkup(keyboard)
   await update.message.reply_text(
     "获取完成", 

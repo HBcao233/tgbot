@@ -6,28 +6,6 @@ import os.path
 from util import logger
 
 
-def parseText(text):
-  hide = False
-  mark = False
-  origin = False
-  args = text.split(" ")
-  if len(args) >= 2:
-      text = args[0]
-      if "hide" in args or '省略' in args: hide = True
-      if "mark" in args or '遮罩' in args: mark = True
-      if 'origin' in args or '原图' in args: origin = True
-
-  pid = re.sub(r"((pid|Pid|PID) ?)?", "", text)
-  pid = re.sub(
-      r"^(https?://)?(www.)?pixiv.net/member_illust.php?.*illust_id=", "", pid
-  ).strip()
-  pid = re.sub(r"((https?://)?(www.)?pixiv.net/(artworks|i)/)?", "", pid).strip()
-  pid = re.sub(r"/?(\?.*)?(#.*)?", "", pid).strip()
-  
-  logger.info(f"{pid = }, {hide = }, {mark = }, {origin = }")
-  return pid, hide, mark, origin
-
-
 def parsePidMsg(res, hide=False):
   pid = res["illustId"]
 
