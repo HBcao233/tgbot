@@ -63,7 +63,7 @@ async def _(update, context, text):
       reply_to_message_id=message.message_id,
     )
     
-  m = await bot.send_message(
+  mid = await bot.send_message(
     text="请等待...", 
     chat_id=message.chat.id, 
     reply_to_message_id=message.message_id,
@@ -143,5 +143,5 @@ async def _(update, context, text):
       chat_id=message.chat.id, 
       reply_to_message_id=message.message_id,
     )
-  await bot.delete_message(chat_id=message.chat.id, message_id=m.message_id)
+  await bot.delete_message(chat_id=message.chat.id, message_id=mid.message_id)
     

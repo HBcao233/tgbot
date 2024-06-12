@@ -133,12 +133,26 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 @handler('cancel', info='取消当前任务')
 async def cancel(update, context, text):
+  import inspect
   tasks = context.user_data.get('tasks', [])
   if not len(tasks):
     return await update.message.reply_text('当前没有进行中的任务')
+  
+  flag = True
   for i in tasks:
+    logger.info(f'取消任务: {id(i)}')
     i.cancel()
-  await update.message.reply_text('已取消所有任务')
+    c = i.get_coro().cr_frame
+    c = inspect.getargvalues(c).locals
+    
+    if (m := c.get('mid', None)):
+      await update.message.reply_text(
+        f'取消任务 {id(i)}',
+        reply_to_message_id=m.message_id,
+      )
+      flag = False
+  if flag:
+    await update.message.reply_text('已取消所有任务')
   context.user_data['tasks'] = []
   
   

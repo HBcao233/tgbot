@@ -25,7 +25,7 @@ from plugin import handler, inline_handler, button_handler
 from .data_source import get_twitter, parseTidMsg, parseMedias
 from .getPreview import getPreview
 
-_parttern = r'(?:^|(?:https?://)?(?:twitter|x|vxtwitter|fxtwitter)\.com/[a-z0-9_]+/status/)(\d{13,})'
+_parttern = r'(?:^|(?:tid|Tid|TID) ?|(?:https?://)?(?:twitter|x|vxtwitter|fxtwitter)\.com/[a-zA-Z0-9_]+/status/)(\d{13,})'
 @handler('tid',
   private_pattern=_parttern,
   pattern=r"^(?:tid|Tid|TID) " + _parttern,
