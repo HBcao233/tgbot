@@ -51,9 +51,9 @@ async def _(update, context, text):
 def getMinMax(text):
   text = text.replace('roll', '').strip()
   text = re.sub(r'(\d+)- ?(\d+)', r'\1 \2', text)
-  f = True
-  _min = 0
-  _max = 9
+  f = False
+  _min = 1
+  _max = 10
   arr = re.split(r'([ \/~])', text)
   logger.info(arr)
   for i in arr:
@@ -63,9 +63,7 @@ def getMinMax(text):
       else:
         _max = int(i)
     elif re.match(r'[ \/~]', i):
-      f = False
+      f = True
   if _min > _max: 
-    t = _min
-    _min = _max
-    _max = t
+    _min, _max = _max, _min
   return _min, _max
