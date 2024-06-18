@@ -49,7 +49,11 @@ async def request(
         timeout=httpx.Timeout(connect=None, read=None, write=None, pool=None),
         **kwargs
       )
-    logger.info(f"{method} {url} code: {r.status_code}")
+    t = logger.info
+    if r.status_code != 200:
+      t = logger.warning
+    if url != 'https://telegra.ph/upload':
+      t(f"{method} {url} code: {r.status_code}")
     await client.aclose()
     return r
 

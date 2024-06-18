@@ -25,22 +25,24 @@ from plugin import handler, inline_handler, button_handler
 from .data_source import get_twitter, parseTidMsg, parseMedias
 from .getPreview import getPreview
 
-_parttern = r'(?:^|(?:tid|Tid|TID) ?|(?:https?://)?(?:twitter|x|vxtwitter|fxtwitter)\.com/[a-zA-Z0-9_]+/status/)(\d{13,})'
+
+_pattern = r'(?:^|^(?:tid|Tid|TID) ?|(?:https?://)?(?:twitter|x|vxtwitter|fxtwitter)\.com/[a-zA-Z0-9_]+/status/)(\d{13,})(?:[^0-9].*)?$'
 @handler('tid',
-  private_pattern=_parttern,
-  pattern=r"^(?:tid|Tid|TID) " + _parttern,
+  private_pattern=_pattern,
+  pattern=_pattern.replace(r'(?:^|', r'(?:'),
   info="获取推文 /tid <url/tid> [hide] [mark]"
 )
 async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
-  if not (match := re.search(_parttern, text)):
-    return await update.message.reply_text(
+  message = update.message
+  if not (match := re.search(_pattern, text)):
+    return await message.reply_text(
         "用法: /tid <url/tid> [hide] [mark]\n"
         "tid/url: 推文链接或status_id\n"
         "hide: 隐藏信息，推文内容将只显示推文链接\n"
         "mark: 添加遮罩\n"
         "私聊小派魔时可以省略/tid，直接发送<url/tid> [hide] [mark]哦\n"
         "或者使用@hbcao1bot <url/tid> [hide] [mark]作为内联模式发送~",
-        reply_to_message_id=update.message.message_id,
+        reply_to_message_id=message.message_id,
     )
   tid = match.group(1)
   hide = False
@@ -53,20 +55,22 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     mark = True
   if 'nopreview' in arr:
     nopreview = True
+  if str(message.chat.type) != "private":
+    nopreview = True
   logger.info(f"{tid = }, {hide = }, {mark = }")
   
   res = await get_twitter(tid)
   if type(res) == str:
-      return await update.message.reply_text(res)
+      return await message.reply_text(res)
   if 'tombstone' in res.keys():
       logger.info(json.dumps(res))
-      return await update.message.reply_text(res['tombstone']['text']['text'])
+      return await message.reply_text(res['tombstone']['text']['text'])
   
   msg, full_text, time = parseTidMsg(res) 
   msg = msg if not hide else 'https://x.com/i/status/' + tid
   tweet = res["legacy"]
   
-  await update.message.reply_chat_action(action='upload_photo')
+  await message.reply_chat_action(action='upload_photo')
   # 格式化媒体
   medias = parseMedias(tweet)
   ms = []
@@ -115,7 +119,7 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
   if not nopreview:
     try:
       img = await getPreview(res, medias, full_text, time)
-      await update.message.reply_photo(
+      await message.reply_photo(
         photo=open(img, 'rb'),
         reply_to_message_id=update.message.message_id,
       )
@@ -124,9 +128,9 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     
   # 发送
   try:
-    m = await update.message.reply_media_group(
+    m = await message.reply_media_group(
       media=ms, 
-      reply_to_message_id=update.message.message_id,
+      reply_to_message_id=message.message_id,
       read_timeout=60,
       write_timeout=60,
       connect_timeout=60,
@@ -148,6 +152,8 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     logger.warning(traceback.format_exc())
     await update.message.reply_text("媒体发送失败")
   
+  if str(message.chat.type) != "private":
+    return
   keyboard = [[]]
   if not mark:
     keyboard[0].append(InlineKeyboardButton(
@@ -159,11 +165,21 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     callback_data=f"tid {tid} {'hide' if not hide else ''} {'mark' if mark else ''} nopreview"
   ))
   reply_markup = InlineKeyboardMarkup(keyboard)
-  await update.message.reply_text(
+  mid = await message.reply_text(
     "获取完成", 
     reply_to_message_id=update.message.message_id,
     reply_markup=reply_markup,
   )
+  '''
+  if str(message.chat.type) != "private":
+    async def _del(context):
+      await context.bot.delete_message(chat_id=context.job.data[0], message_id=context.job.data[1])
+ 
+    context.job_queue.run_once(
+      _del, 10, 
+      data=[mid.chat.id, mid.message_id],
+    )
+  '''
   
   
 @button_handler(pattern=r"^tid \d{13,}")

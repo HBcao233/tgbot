@@ -75,7 +75,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) 
 
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.info(update.message)
+    # logger.info(update.message)
     
     if not update.message or update.message.chat.type != "private":
         return
@@ -178,6 +178,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE, text=''):
         "指令列表: \n"
         "/pid <url/pid>: 获取p站作品 (类似 @Pixiv_bot\n"
         "/tid <url/tid>: 获取推文 (类似 @TwPicBot\n"
+        "/bill <url/aid/bvid>: 获取b站视频 (类似 @bilifeedbot\n"
         "/eid <url>: e站爬取\n"
         "/kid <url>: kemono爬取\n"
         "小提示: 私聊可直接发送url/pid/tid: 自动识别可进行的爬取\n"

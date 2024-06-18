@@ -19,10 +19,10 @@ from plugin import handler, inline_handler, button_handler
 from .data_source import parsePidMsg, getAnime
 
 
-_pattern = r'(?:https?://)?(?:www\.)?(?:pixiv\.net/(?:member_illust\.php\?.*illust_id=|artworks/|i/))?(\d{6,12})(?:[^0-9].*)?$'
+_pattern = r'(?:^|^(?:pid|PID) ?|(?:https?://)?(?:www\.)?(?:pixiv\.net/(?:member_illust\.php\?.*illust_id=|artworks/|i/)))(\d{6,12})(?:[^0-9].*)?$'
 @handler('pid', 
-  private_pattern='^' + _pattern,
-  pattern=r"^(?:pid|Pid|PID) ?" + _pattern,
+  private_pattern=_pattern,
+  pattern=_pattern.replace(r'(?:^|', r'(?:'),
   info="获取p站作品 /pid <url/pid> [hide] [mark]"
 )
 async def _pixiv(update, context, text=None):
@@ -206,6 +206,8 @@ async def _pixiv(update, context, text=None):
             reply_to_message_id=update.message.message_id,
         )
   
+  if str(message.chat.type) != "private":
+    return
   keyboard = [[
     InlineKeyboardButton(
       "获取原图" if not origin else '取消原图', 
@@ -243,7 +245,7 @@ async def _pixiv(update, context, text=None):
   
 @button_handler(pattern=r"^pid \d{6,12}")
 async def _(update, context, query):
-  # logger.info(update)
+  logger.info(update)
   message = update.callback_query.message
   _update = Update(
     update_id=update.update_id, 

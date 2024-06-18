@@ -81,6 +81,13 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     
     soup = BeautifulSoup(html0, "html.parser")
     title, num, magnets = await parseEidGMsg(text, soup)
+    logger.info(title)
+    if not title:
+      return await context.bot.edit_message_text(
+        chat_id=update.message.chat_id, 
+        message_id=mid.message_id,
+        text='获取失败',
+      )
     
     now = datetime.now()
     key = '/'.join(arr) + f'.{now:%Y.%m.%d}'

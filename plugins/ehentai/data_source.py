@@ -39,11 +39,11 @@ async def parseEidGMsg(eid, soup):
     '''
     格式化e站g画廊 msg
     '''
-    #name1 = soup.select("#gd2 #gn")[0].string
     title = soup.select("#gd2 #gj")[0].string
     num = soup.select("#gdd tr")[5].select(".gdt2")[
         0].text.replace(" pages", "")
-
+    if not title:
+      title = soup.select("#gd2 #gn")[0].string
     # first = soup.select("#gdt a")[0].attrs["href"]
     # r = await util.get(first, headers=config.ex_headers, proxy=True)
     # html1 = r.text
@@ -97,7 +97,12 @@ async def parsePage(text, soup, title, num, nocache=False, bar=None):
     r = await util.get(u, headers=config.ex_headers)
     html1 = r.text
     soup1 = BeautifulSoup(html1, "html.parser")
-    url = soup1.select("#i3 img")[0].attrs["src"]
+    try:
+      url = soup1.select("#i3 img")[0].attrs["src"]
+    except:
+      logger.warning(f'[{urls.find(u)}] {u} 获取失败')
+      logger.warning(traceback.format_exc())
+      return None
     try:
       r0 = await util.get(url, headers=dict(config.ex_headers, **{'referer': text}))
       r = await util.post(
@@ -108,6 +113,7 @@ async def parsePage(text, soup, title, num, nocache=False, bar=None):
       )
       url0 = r.json()[0]['src']
     except:
+      logger.warning(f'[{urls.find(u)}] {u} 获取失败')
       logger.warning(traceback.format_exc())
     else:
       url = url0
@@ -123,7 +129,8 @@ async def parsePage(text, soup, title, num, nocache=False, bar=None):
   content = []
   tasks = [parse(i) for i in urls]
   for i in await asyncio.gather(*tasks):
-    content.append(i)
+    if i is not None:
+      content.append(i)
   
   return await createPage(title, content)
   
