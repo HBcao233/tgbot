@@ -1,6 +1,7 @@
 python-telegram-bot[socks]==20.3
 python-telegram-bot[job-queue]==20.3
 httpx
+python-dotenv
 nest_asyncio
 ujson
 python-dateutil
