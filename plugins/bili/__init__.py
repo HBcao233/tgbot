@@ -36,7 +36,7 @@ _pattern = r"(?:^|bilibili\.com/video/)(av\d{1,11}|BV[0-9a-zA-Z]{8,12})|(?:b23\.
 async def _(update, context, text):
   bot = context.bot
   message = update.message
-  logger.info(message)
+  # logger.info(message)
   if text == "":
     return await bot.send_message(
       text="用法: /bill <aid/bvid>", 
@@ -52,13 +52,30 @@ async def _(update, context, text):
   if 'mark' in arr:
     mark = True
   
+  flag = 0
   match = re.search(_pattern, text)
   if match.group(2):
     r = httpx.get('https://b23.tv/'+ match.group(2), headers=config.bili_headers, follow_redirects=True)
-    text = str(r.url).split('?')[0]
-    match = re.search(_pattern, text)
+    text = str(r.url)
+    match = re.search(_pattern, text.split('?')[0])
+    flag = 1
+    
+  p = 1
+  g = match.group(1)
+  aid = ''
+  bvid = ''
+  if 'av' in g:
+    aid = g.replace('av', '')
+  else:
+    bvid = g
+  
+  if (match1 := re.search(r'(?:\?|&)p=(\d+)', text)):
+    if (_p := int(match1.group(1))) > 1:
+      p = _p
+      
+  if flag:
     await bot.send_message(
-      text=text, 
+      text=f'https://www.bilibili.com/video/{bvid}' + ('?p=' + str(p) if p>1 else ''), 
       chat_id=message.chat.id, 
       reply_to_message_id=message.message_id,
     )
@@ -69,13 +86,6 @@ async def _(update, context, text):
     reply_to_message_id=message.message_id,
   )
     
-  g = match.group(1)
-  aid = ''
-  bvid = ''
-  if 'av' in g:
-    aid = g.replace('av', '')
-  else:
-    bvid = g.replace('BV', '')
   r = await util.get(
     'https://api.bilibili.com/x/web-interface/view', 
     headers=config.bili_headers,
@@ -102,18 +112,28 @@ async def _(update, context, text):
   res = res['data']
   aid = res['aid']
   bvid = res['bvid']
+  cid = res['cid']
+  p_url = ''
+  p_tip = ''
+  if p > 1:
+    p_url = '?p=' + str(p)
+    p_tip = ' P' + str(p)
+    for i in res['pages']:
+      if i['page'] == p:
+        cid = i['cid']
+  logger.info(f'{bvid} av{aid} P{p} cid: {cid}')
   msg = (
-    f"<a href=\"https://www.bilibili.com/video/{res['bvid']}\">{res['title']}</a> - "
+    f"<a href=\"https://www.bilibili.com/video/{bvid}{p_url}\">{res['title']}{p_tip}</a> - "
     f"<a href=\"https://space.bilibili.com/{res['owner']['mid']}\">{res['owner']['name']}</a>"
   )
   
   try:
     data = util.Videos()
-    # logger.info(data)
-    logger.info(f'bvid: {bvid} video: '+str(data.get(bvid, None)))
-    
-    if not (info := data.get(bvid, None)) or nocache:
-      info = await getVideo(bvid, aid, res['cid'])
+    key = bvid
+    if p > 1:
+      key += '_p' + str(p)
+    if not (info := data.get(key, None)) or nocache:
+      info = await getVideo(bvid, aid, cid)
     video, duration, width, height, thumbnail = tuple(info)
       
     m1 = await bot.send_video(
@@ -134,7 +154,7 @@ async def _(update, context, text):
       pool_timeout=60,
     )
     v = m1.video
-    data[bvid] = [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id]
+    data[key] = [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id]
     data.save()
   except Exception:
     logger.error(traceback.print_exc())

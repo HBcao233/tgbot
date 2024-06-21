@@ -74,16 +74,21 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) 
       return
 
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # logger.info(update.message)
-    
-    if not update.message or update.message.chat.type != "private":
-        return
-    
-    asyncio.set_event_loop(loop)
-    for i in config.commands:
-      if i.cmd == '_':
-        loop.create_task( i.func(update, context) )
+async def echo(update, context) -> None:
+  message = update.message
+  if (attr := getattr(message, 'photo', None)):
+    logger.info(f'photo file_id: {attr[-1].file_id}')
+  for i in ['video', 'audio', 'document']:
+    if (attr := getattr(message, i, None)):
+      logger.info(f'{i} file_id: {attr.file_id}')
+  
+  if not message or message.chat.type != "private":
+      return
+  
+  asyncio.set_event_loop(loop)
+  for i in config.commands:
+    if i.cmd == '_':
+      loop.create_task( i.func(update, context) )
 
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

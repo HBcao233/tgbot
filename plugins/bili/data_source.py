@@ -95,7 +95,7 @@ async def _get(aid, cid):
     headers=dict(config.bili_headers, **headers),
     params=wbi(mixin_key, params),
   )
-  logger.info(r.text)
+  # logger.info(r.text)
   res = r.json()['data']
   if 'dash' in res:
     return res['dash']['video'], res['dash']['audio']
