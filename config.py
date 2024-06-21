@@ -62,4 +62,3 @@ bili_headers = {
   # 只需要 cookie 中的 SESSDATA，字段
   'cookie': f'SESSDATA={bili_SESSDATA};'
 }
-bili_access_token = env.get('bili_access_token', '')

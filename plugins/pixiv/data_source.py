@@ -71,7 +71,12 @@ async def getAnime(pid):
       ext='zip',
       headers=config.pixiv_headers
     )
-    proc = await asyncio.create_subprocess_exec('unzip', '-o', '-d', util.getCache(name+"/"), zi)
+    proc = await asyncio.create_subprocess_exec(
+      'unzip', '-o', '-d', util.getCache(name+"/"), zi, 
+      stdout=asyncio.subprocess.PIPE, 
+      stdin=asyncio.subprocess.PIPE,
+      stderr=asyncio.subprocess.PIPE
+    )
     await proc.wait()
   
   f = frames[0]['file']
