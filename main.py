@@ -59,15 +59,20 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) 
   
   asyncio.set_event_loop(loop)
   for i in config.commands:
+    if i.cmd == '_':
+      task = loop.create_task( i.func(update, context, text) )
+      task.add_done_callback(callback(context))
+      context.user_data['tasks'].append(task)
+      
+  for i in config.commands:
     if (
       i.private_pattern is not None and str(message.chat.type) == "private" and re.search(i.private_pattern, text)
       or i.pattern is not None and re.search(i.pattern, text)
-      or i.cmd == '_'
     ):
       task = loop.create_task( i.func(update, context, text) )
       task.add_done_callback(callback(context))
       context.user_data['tasks'].append(task)
-      if i.cmd != '_': return
+      return
 
 
 async def echo(update, context) -> None:

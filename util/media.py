@@ -15,14 +15,18 @@ def videoInfo(path):
   height = cap.get(4)
   cap.set(cv2.CAP_PROP_POS_FRAMES, 1)
   ret, img = cap.read()
-  thumbnail = getCache(f'{round(time.time())}.jpg')
-  getPhotoThumbnail(img, saveas=thumbnail)
   cap.release()
-  _thumbnail = open(thumbnail, 'rb')
-  os.remove(thumbnail)
-  return open(path, 'rb'), duration, width, height, _thumbnail
+  img = getPhotoThumbnail(img)
+  thumbnail = img2bytes(img, 'jpg')
+  return open(path, 'rb'), duration, width, height, thumbnail
 
 
+def img2bytes(img, ext):
+  if '.' not in ext:
+    ext = '.' + ext
+  return cv2.imencode(ext, img)[1].tobytes()
+  
+  
 def getPhotoThumbnail(path, saveas=None) -> cv2.Mat:
   return resizePhoto(path, 320, saveas=saveas)
   

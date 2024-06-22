@@ -9,6 +9,7 @@ from telegram import (
   InputMediaDocument,
 )
 import re
+import os
 
 import util
 from util.log import logger
@@ -105,7 +106,9 @@ async def _pixiv(update, context, text=None):
     )
     
   else:
-    imgUrl = res["urls"]["original"]
+    imgUrl = res["urls"]["regular"]
+    if origin:
+      imgUrl = res["urls"]["original"]
     count = res["pageCount"]
     piece = 10
     pcount = (count - 1) // piece + 1
@@ -119,9 +122,8 @@ async def _pixiv(update, context, text=None):
         "正在获取 p" + f"{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}",
       )
       ms = []
-      i = p * piece
       t = documents if origin else photos
-      while i < min((p + 1) * piece, count):
+      for i in range(p * piece, min((p + 1) * piece, count)):
         url = imgUrl.replace("_p0", f"_p{i}")
         tip = (
           f"\n{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}"
@@ -129,6 +131,8 @@ async def _pixiv(update, context, text=None):
           else ""
         )
         name = f"{pid}_p{i}"
+        if not origin:
+          name += '_regular'
         if not (media := t[name]):
           try:
             img = await util.getImg(
@@ -137,8 +141,12 @@ async def _pixiv(update, context, text=None):
               ext=True, 
               headers=headers,
             )
-            util.resizePhoto(img, saveas=img)
-            media = open(img, 'rb')
+            if not origin:
+              ext = os.path.splitext(img)[-1]
+              img = util.resizePhoto(img)
+              media = util.img2bytes(img, ext)
+            else:
+              media = open(img, 'rb')
           except Exception:
             logger.warning(traceback.format_exc())
             return await update.message.reply_text(
@@ -169,7 +177,6 @@ async def _pixiv(update, context, text=None):
               parse_mode="HTML",
             )
           )
-        i += 1
   
       try:
         m = await update.message.reply_media_group(
@@ -184,6 +191,8 @@ async def _pixiv(update, context, text=None):
         for i in range(0, min(piece, count - p * piece)):
           ii = p * piece + i
           name = f"{pid}_p{ii}"
+          if not origin:
+            name += '_regular'
           tt = m[i].document if origin else m[i].photo[-1]
           t[name] = tt.file_id
         t.save()
