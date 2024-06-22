@@ -1,7 +1,11 @@
 import asyncio
 import telegram
 import re
-from telegram import Update, BotCommand
+from telegram import (
+  Update, 
+  BotCommand,
+  BotCommandScopeChat,
+)
 from telegram.ext import (
     ApplicationBuilder,
     InlineQueryHandler,
@@ -58,11 +62,12 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) 
     if (
       i.private_pattern is not None and str(message.chat.type) == "private" and re.search(i.private_pattern, text)
       or i.pattern is not None and re.search(i.pattern, text)
+      or i.cmd == '_'
     ):
       task = loop.create_task( i.func(update, context, text) )
       task.add_done_callback(callback(context))
       context.user_data['tasks'].append(task)
-      return
+      if i.cmd != '_': return
 
 
 async def echo(update, context) -> None:
@@ -154,11 +159,15 @@ async def cancel(update, context, text):
   
 @handler('start')
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
-    if len(text) <= 0:
-        return await help(update, context)
-    text = text.replace("_", " ").strip()
-    logger.info(f"start: {text}")
-    await handle(update, context, text)
+  if len(text) <= 0:
+    for i in config.commands:
+      if i.cmd == 'help':
+        await i.func(update, context)
+        break
+    return 
+  text = text.replace("_", " ").strip()
+  logger.info(f"start: {text}")
+  await handle(update, context, text)
     
     
 async def main():
@@ -187,10 +196,17 @@ async def main():
 
   commands = []
   for i in config.commands:
-    if i.info != "":
+    if i.info != "" and i.scope != 'superadmin':
       commands.append(BotCommand(i.cmd, i.info))
   await bot.set_my_commands(commands)
   
+  for i in config.commands:
+    if i.info != "" and i.scope == 'superadmin':
+      commands = [BotCommand(i.cmd, i.info)] + commands
+  for i in config.superadmin:
+    scope = BotCommandScopeChat(chat_id=i)
+    await bot.set_my_commands(commands, scope=scope)
+    
   await app.initialize()
   await app.start()
   await app.updater.start_polling()

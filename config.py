@@ -6,9 +6,11 @@ load_dotenv()
 env = dict(os.environ)
 
 token = env.get('token')
-echo_chat_id = int(env.get('echo_chat_id', 0))
 base_url = env.get('base_url', 'https://api.telegram.org/bot')
 base_file_url = env.get('base_file_url', 'https://api.telegram.org/file/bot')
+
+echo_chat_id = int(env.get('echo_chat_id', 0))
+superadmin = [int(x) for x in env.get('superadmin', '').split(',') if x]
 
 telegraph_author_name = env.get('telegraph_author_name', '')
 telegraph_author_url = env.get('telegraph_author_url', '')
