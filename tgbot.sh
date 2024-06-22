@@ -1,10 +1,8 @@
 #!/bin/bash
-# chkconfig: 2345 79 80
 # description: Starts and stops HBcaobot.
 # author: HBcao
-# site: https://www.hbcao.top
-project="tgbot";
-root="/www/wwwroot/"${project};
+
+root=`dirname \`readlink $0\``;
 command=("python3 ${root}/main.py");
 k=${command[0]}
 
@@ -70,13 +68,10 @@ log)
     nl ${root}/bot.log | tail -n 100
   fi
   ;;
-test)
-  curl --socks5 127.0.0.1:10808 https://www.pixiv.net
-  ;;
 cd)
   cd ${root}
   ;;
 *)
-  echo "Usage: $0 {start|restart|stop|status|botlog|test}"
+  echo "Usage: $0 {start|restart|stop|status|log}"
   exit 1
 esac

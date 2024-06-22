@@ -21,11 +21,10 @@ import os.path
 import httpx
 import ujson as json
 
-import config
 import util
 from util.log import logger
 from plugin import handler, inline_handler, button_handler
-from .data_source import getVideo
+from .data_source import headers, getVideo
 
 
 _pattern = r"(?:^|bilibili\.com/video/)(av\d{1,11}|BV[0-9a-zA-Z]{8,12})|(?:b23\.tv\\?/((?![0-9]{7,7})[0-9a-zA-Z]{7,7}))"
@@ -55,7 +54,11 @@ async def _(update, context, text):
   flag = 0
   match = re.search(_pattern, text)
   if match.group(2):
-    r = httpx.get('https://b23.tv/'+ match.group(2), headers=config.bili_headers, follow_redirects=True)
+    r = httpx.get(
+      'https://b23.tv/'+ match.group(2),
+      follow_redirects=True,
+      headers=headers,
+    )
     text = str(r.url)
     match = re.search(_pattern, text.split('?')[0])
     flag = 1
@@ -88,11 +91,11 @@ async def _(update, context, text):
     
   r = await util.get(
     'https://api.bilibili.com/x/web-interface/view', 
-    headers=config.bili_headers,
     params={
       'aid': aid,
       'bvid': bvid
-    }
+    },
+    headers=headers,
   )
   # logger.info(r.text)
   res = r.json()
@@ -164,4 +167,3 @@ async def _(update, context, text):
       reply_to_message_id=message.message_id,
     )
   await bot.delete_message(chat_id=message.chat.id, message_id=mid.message_id)
-    

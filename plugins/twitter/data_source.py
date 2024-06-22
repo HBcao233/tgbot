@@ -9,6 +9,17 @@ import config
 import util
 from util.log import logger
 
+env = config.env
+csrf_token = env.get('twitter_csrf_token', '')
+auth_token = env.get('twitter_auth_token', '')
+headers = {
+  'content-type': 'application/json; charset=utf-8',
+  'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
+  'x-csrf-token': csrf_token,
+  'cookie': f'auth_token={auth_token}; ct0={csrf_token}',
+  'X-Twitter-Client-Language': 'zh-cn',
+  'X-Twitter-Active-User': 'yes'
+}
 
 async def get_twitter(tid):
     url = "https://twitter.com/i/api/graphql/NmCeCgkVlsRGS1cAwqtgmw/TweetDetail"
@@ -52,7 +63,7 @@ async def get_twitter(tid):
     )
     try:
         r = await util.get(
-          url, params=data, headers=config.twitter_headers, 
+          url, params=data, headers=headers, 
         )
         tweet_detail = r.json()
         if "errors" in tweet_detail.keys() and len(tweet_detail["errors"]) > 0:

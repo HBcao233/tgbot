@@ -22,7 +22,7 @@ import util
 from util.log import logger
 from plugin import handler, inline_handler, button_handler
 
-from .data_source import get_twitter, parseTidMsg, parseMedias
+from .data_source import headers, get_twitter, parseTidMsg, parseMedias
 from .getPreview import getPreview
 
 
@@ -81,7 +81,7 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
       md5 = media['md5']
       img = await util.getImg(
         url, 
-        headers=config.twitter_headers,
+        headers=headers,
         ext="png"
       )
       photo = open(img, 'rb')
@@ -98,7 +98,7 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
       if not (info := videos.get(md5, None)):
         path = await util.getImg(
           url, 
-          headers=config.twitter_headers, 
+          headers=headers, 
           ext="mp4"
         )
         info = util.videoInfo(path)

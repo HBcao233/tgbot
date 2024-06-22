@@ -10,13 +10,11 @@ from telegram import (
 )
 import re
 
-import config
 import util
 from util.log import logger
 from util.progress import Progress
 from plugin import handler, inline_handler, button_handler
-
-from .data_source import parsePidMsg, getAnime
+from .data_source import headers, parsePidMsg, getAnime
 
 
 _pattern = r'(?:^|^(?:pid|PID) ?|(?:https?://)?(?:www\.)?(?:pixiv\.net/(?:member_illust\.php\?.*illust_id=|artworks/|i/)))(\d{6,12})(?:[^0-9].*)?$'
@@ -60,7 +58,7 @@ async def _pixiv(update, context, text=None):
   )
   try:
     url = f"https://www.pixiv.net/ajax/illust/{pid}"
-    r = await util.get(url, headers=config.pixiv_headers)
+    r = await util.get(url, headers=headers)
   except Exception:
     return await update.message.reply_text(
         "连接超时",
@@ -137,7 +135,7 @@ async def _pixiv(update, context, text=None):
               url, 
               saveas=name, 
               ext=True, 
-              headers=config.pixiv_headers, 
+              headers=headers,
             )
             util.resizePhoto(img, saveas=img)
             media = open(img, 'rb')

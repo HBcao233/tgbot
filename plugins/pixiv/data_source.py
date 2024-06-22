@@ -5,6 +5,10 @@ import config
 import os.path
 from util import logger
 
+PHPSESSID = config.env.get('pixiv_PHPSESSID', '')
+headers = {
+  'cookie': f'PHPSESSID={PHPSESSID};'
+}
 
 def parsePidMsg(res, hide=False):
   pid = res["illustId"]
@@ -61,7 +65,7 @@ def parsePidMsg(res, hide=False):
 async def getAnime(pid):
   name = f'{pid}_ugoira'
   url = f"https://www.pixiv.net/ajax/illust/{pid}/ugoira_meta"
-  r = await util.get(url, headers=config.pixiv_headers)
+  r = await util.get(url, headers=headers)
   res = r.json()['body']
   frames = res['frames']
   if not os.path.isdir(util.getCache(name+"/")):
@@ -69,7 +73,7 @@ async def getAnime(pid):
       res['src'], 
       saveas=name, 
       ext='zip',
-      headers=config.pixiv_headers
+      headers=headers,
     )
     proc = await asyncio.create_subprocess_exec(
       'unzip', '-o', '-d', util.getCache(name+"/"), zi, 

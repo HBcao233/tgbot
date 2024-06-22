@@ -13,11 +13,10 @@ from bs4 import BeautifulSoup
 import ujson as json
 from datetime import datetime
 
-import config
 import util
 from util.log import logger
 from plugin import handler
-from .data_source import parseEidSMsg, parseEidGMsg, parsePage
+from .data_source import headers, parseEidSMsg, parseEidGMsg, parsePage
 from util.progress import Progress
 
 
@@ -47,7 +46,7 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
   arr = [match.group(i) for i in range(1, 5)]
   # 单页图片
   if arr[1] == "s":
-    r = await util.get(text, headers=config.ex_headers, proxy=True)
+    r = await util.get(text, headers=headers)
     html = r.text
     if "Your IP address has been" in html:
         return await update.message.reply_text("梯子IP被禁，请联系管理员更换梯子")
@@ -56,7 +55,7 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
 
     msg, url = parseEidSMsg(text, html)
     try:
-        img = await util.getImg(url, proxy=True, headers=config.ex_headers)
+        img = await util.getImg(url, proxy=True, headers=headers)
         await update.message.reply_photo(
             open(img, "rb"),
             caption=msg,
@@ -72,7 +71,7 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     mid = await update.message.reply_text(
         "请等待...", reply_to_message_id=update.message.message_id
     )
-    r = await util.get(text, params={'p': 0}, headers=config.ex_headers)
+    r = await util.get(text, params={'p': 0}, headers=headers)
     html0 = r.text
     if "Your IP address has been" in html0:
         return await update.message.reply_text("IP被禁")

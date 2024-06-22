@@ -7,6 +7,10 @@ import httpx
 import util
 import config
 
+SESSDATA = config.env.get('bili_SESSDATA', '')
+headers = {
+  'cookie': f'SESSDATA={SESSDATA}'
+}
 
 async def getMixinKey():
   mixinKeyEncTab = [
@@ -16,7 +20,7 @@ async def getMixinKey():
     36, 20, 34, 44, 52
   ]
   
-  r = await util.get('https://api.bilibili.com/x/web-interface/nav', headers=config.bili_headers)
+  r = await util.get('https://api.bilibili.com/x/web-interface/nav', headers=headers)
   res = r.json()['data']['wbi_img']
   img_key = res['img_url'].rsplit('/', 1)[1].split('.')[0]
   sub_key = res['sub_url'].rsplit('/', 1)[1].split('.')[0]

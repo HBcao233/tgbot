@@ -6,13 +6,11 @@ import gzip
 import struct
 
 import util
-import config
 from util.log import logger
-from .auth import getMixinKey, wbi
+from .auth import headers, getMixinKey, wbi
 
 
 qn = 64
-
 
 def _cmp(x, y):
   if x['id'] > qn:
@@ -35,7 +33,7 @@ def _cmp(x, y):
 async def getVideo(bvid, aid, cid):
   video_url = None
   audio_url = None
-  videos, audios = await _get(aid, cid)
+  videos, audios = await _getVideo(aid, cid)
   if audios is None:
     video_url = videos
   else:
@@ -51,11 +49,11 @@ async def getVideo(bvid, aid, cid):
   result = await asyncio.gather(
     util.getImg(
       video_url,
-      headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
+      headers=headers,
     ), 
     util.getImg(
       audio_url,
-      headers=dict(config.bili_headers, **{'Referer': 'https://www.bilibili.com'}),
+      headers=headers,
     ),
   ) 
   path = util.getCache(f'{bvid}.mp4')
@@ -77,7 +75,7 @@ async def getVideo(bvid, aid, cid):
   return util.videoInfo(path)
 
 
-async def _get(aid, cid):
+async def _getVideo(aid, cid):
   url = 'https://api.bilibili.com/x/player/wbi/playurl'
   mixin_key = await getMixinKey()
   params = {
@@ -92,8 +90,8 @@ async def _get(aid, cid):
   }
   r = await util.get(
     url,
-    headers=dict(config.bili_headers, **headers),
     params=wbi(mixin_key, params),
+    headers=headers,
   )
   # logger.info(r.text)
   res = r.json()['data']

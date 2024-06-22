@@ -10,6 +10,14 @@ from util import logger
 from util.telegraph import createPage, getPageList
 
 
+env = config.env
+ipb_member_id = env.get('ex_ipb_member_id', '')
+ipb_pass_hash = env.get('ex_ipb_pass_hash', '')
+igneous = env.get('ex_igneous', '')
+headers = {
+  'cookie': f'ipb_member_id={ipb_member_id};ipb_pass_hash={ipb_pass_hash};igneous={igneous}',
+}
+
 def parseEidSMsg(eid, _html):
     '''
     格式化e站s单页 msg
@@ -21,7 +29,7 @@ def parseEidSMsg(eid, _html):
 
     prev = soup.select("#i2 #prev")[0].attrs["href"]
     next = soup.select("#i2 #next")[0].attrs["href"]
-    source = soup.select("#i7 a")[0].attrs["href"]
+    source = soup.select("#i6 a")[2].attrs["href"]
     parent = soup.select("#i5 a")[0].attrs["href"]
     return (
         f"\n<code>{name}</code>\n"
@@ -44,14 +52,9 @@ async def parseEidGMsg(eid, soup):
         0].text.replace(" pages", "")
     if not title:
       title = soup.select("#gd2 #gn")[0].string
-    # first = soup.select("#gdt a")[0].attrs["href"]
-    # r = await util.get(first, headers=config.ex_headers, proxy=True)
-    # html1 = r.text
-    # soup1 = BeautifulSoup(html1, "html.parser")
-    # first_url = soup1.select("#i3 img")[0].attrs["src"]
 
     url = soup.select("#gd5 p")[2].a.attrs["onclick"].split("'")[1]
-    r = await util.get(url, headers=config.ex_headers, proxy=True)
+    r = await util.get(url, headers=headers)
     html = r.text
     soup2 = BeautifulSoup(html, "html.parser")
 
@@ -81,7 +84,7 @@ async def parsePage(text, soup, title, num, nocache=False, bar=None):
   p = 1
   while len(urls) < min(num, 100):
     try:
-      r = await util.get(text, params={'p': p}, headers=config.ex_headers)
+      r = await util.get(text, params={'p': p}, headers=headers)
       html1 = r.text
       soup1 = BeautifulSoup(html1, "html.parser")
       arr = soup1.select("#gdt a")
@@ -93,30 +96,38 @@ async def parsePage(text, soup, title, num, nocache=False, bar=None):
     p += 1
   
   async def parse(u):
-    nonlocal bar, urls
-    r = await util.get(u, headers=config.ex_headers)
-    html1 = r.text
-    soup1 = BeautifulSoup(html1, "html.parser")
-    try:
-      url = soup1.select("#i3 img")[0].attrs["src"]
-    except:
-      logger.warning(f'[{urls.find(u)}] {u} 获取失败')
-      logger.warning(traceback.format_exc())
-      return None
-    try:
-      r0 = await util.get(url, headers=dict(config.ex_headers, **{'referer': text}))
-      r = await util.post(
-        'https://telegra.ph/upload',
-        files={
-          'file': r0.content
-        }
-      )
-      url0 = r.json()[0]['src']
-    except:
-      logger.warning(f'[{urls.find(u)}] {u} 获取失败')
-      logger.warning(traceback.format_exc())
-    else:
-      url = url0
+    nonlocal bar, urls, data
+    if not (url := data.get(u)) or nocache:
+      r = await util.get(u, headers=headers)
+      html1 = r.text
+      soup1 = BeautifulSoup(html1, "html.parser")
+      try:
+        url = soup1.select("#i3 img")[0].attrs["src"]
+      except:
+        logger.warning(f'[{urls.find(u)}] {u} 获取失败')
+        logger.warning(traceback.format_exc())
+        return None
+      try:
+        try:
+          r0 = await util.get(url, 
+            headers=headers.update({'referer': text}))
+        except:
+          r0 = await util.get(url, 
+            headers=headers.update({'referer': text}))
+        r = await util.post(
+          'https://telegra.ph/upload',
+          files={
+            'file': r0.content
+          }
+        )
+        url0 = r.json()[0]['src']
+      except:
+        logger.warning(f'[{urls.index(u)}] {u} 获取失败')
+        logger.warning(traceback.format_exc())
+      else:
+        url = url0
+        data[u] = url
+    
     if bar is not None:
       bar.add(100//len(urls))
     return {
@@ -127,10 +138,12 @@ async def parsePage(text, soup, title, num, nocache=False, bar=None):
     }
     
   content = []
+  data = util.Data('urls')
   tasks = [parse(i) for i in urls]
   for i in await asyncio.gather(*tasks):
     if i is not None:
       content.append(i)
+  data.save()
   
   return await createPage(title, content)
   
