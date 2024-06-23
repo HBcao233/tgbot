@@ -31,7 +31,8 @@ class Progress:
     text += self.bar[8] * (x // 8)
     text += self.bar[x % 8]
     text += self.bar[0] * ((104 - x) // 8)
-    text += f'] {(p / self.total * 100):.2}%' 
+    precent = ('%.2f' % p / self.total * 100).rstrip("0").rstrip(".")
+    text += f'] {precent}%' 
     try:
       self.task = self.loop.create_task(self.bot.edit_message_text(
         chat_id=self.mid.chat.id,
