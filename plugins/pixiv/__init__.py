@@ -7,6 +7,7 @@ from telegram import (
   InlineQueryResultsButton,
   InputMediaPhoto,
   InputMediaDocument,
+  LinkPreviewOptions,
 )
 import re
 import os
@@ -22,11 +23,11 @@ from .data_source import headers, parsePidMsg, getAnime
 _pattern = r'(?:^|^(?:pid|PID) ?|(?:https?://)?(?:www\.)?(?:pixiv\.net/(?:member_illust\.php\?.*illust_id=|artworks/|i/)))(\d{6,12})(?:[^0-9].*)?$'
 @handler('pid', 
   private_pattern=_pattern,
-  pattern=_pattern.replace(r'(?:^|', r'(?:'),
+  pattern=_pattern.replace(r'(?:^|', r'^(?:'),
   info="获取p站作品 /pid <url/pid> [hide] [mark]"
 )
 async def _pixiv(update, context, text=None):
-  if not (match := re.match(r'(?:pid|Pid|PID)? ?' +_pattern, text)):
+  if not (match := re.search(_pattern, text)):
     return await update.message.reply_text(
         "用法: /pid <url/pid> [hide/省略] [mark/遮罩] [origin/原图]\n"
         "url/pid: p站链接或pid\n"
@@ -75,32 +76,33 @@ async def _pixiv(update, context, text=None):
     
   res = res['body']
   msg = parsePidMsg(res, hide)
-  if res['illustType'] == 2:
-    await send_animation(update, context, pid, mid, origin)
-  else:
-    count = res["pageCount"]
-    bar = Progress(
-      bot, mid, total=count,
-      prefix=f"正在获取 p1 ~ {count}",
-    )
-    if count < 11:
-      try:
-        await send_photos(update, context, bar, pid, res, origin, msg, mark)
-      except Exception as e:
-        logger.warning(traceback.format_exc())
-        return await bot.edit_message_text(
-          text=str(e),
-          chat_id=message.chat.id,
-          message_id=mid.message_id,
-        )
-        
-      await bot.delete_message(
-        chat_id=message.chat_id, message_id=mid.message_id
-      )
+  flag = False
+  try:
+    if res['illustType'] == 2:
+      await send_animation(update, pid, origin, mark, msg)
     else:
-      await send_telegraph(update, context, res, mid)
+      count = res["pageCount"]
+      if count < 11:
+        bar = Progress(
+          bot, mid, total=count,
+          prefix=f"正在获取 p1 ~ {count}",
+        )
+        await send_photos(update, res, origin, mark, msg, bar)
+      else:
+        await send_telegraph(update, res)
+        flag = True
+  except PluginException as e:
+    return await bot.edit_message_text(
+      text=str(e),
+      chat_id=message.chat.id,
+      message_id=mid.message_id,
+    )
+  except Exception:
+    logger.warning(traceback.format_exc())
+      
+  await bot.delete_message(chat_id=message.chat.id, message_id=mid.message_id)
   
-  if str(message.chat.type) != "private":
+  if str(message.chat.type) != "private" or flag:
     return
   keyboard = [[
     InlineKeyboardButton(
@@ -150,12 +152,15 @@ async def _(update, context, query):
   await _pixiv(_update, context, query.data)
   
   
-async def send_animation(update, context, pid, mid, origin):
+class PluginException(Exception):
+  pass
+
+
+async def send_animation(update, pid, origin, mark, msg):
   message = update.message
-  bot = context.bot
-  await update.message.reply_chat_action(action='upload_video')
-  animations = util.Data('animations')
-  if not (info := animations[pid]):
+  await message.reply_chat_action(action='upload_video')
+  data = util.Documents() if origin else util.Data('animations')
+  if not (info := data[pid]):
     anime = await getAnime(pid)
     if not anime:
       return await message.reply_text(
@@ -164,28 +169,33 @@ async def send_animation(update, context, pid, mid, origin):
       )
     info = util.videoInfo(anime)
   animation, duration, width, height, thumbnail = tuple(info)
-  m = await message.reply_animation(
-    animation=animation,
-    duration=duration,
-    width=width,
-    height=height,
-    thumbnail=thumbnail,
-    caption=msg,
-    parse_mode='HTML',
-    has_spoiler=mark,
-    reply_to_message_id=update.message.message_id,
-  )
-  v = m.animation
-  animations[pid] = [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id]
-  animations.save()
-  await bot.delete_message(
-    chat_id=message.chat.id, message_id=mid.message_id
-  )
+  
+  kwargs = {
+    'caption': msg,
+    'parse_mode': 'HTML',
+    'reply_to_message_id': message.message_id,
+  }
+  if origin:
+    m = await message.reply_document(document=animation, **kwargs)
+    data[pid] = m.document.file_id
+  else:
+    m = await message.reply_animation(
+      animation=animation,
+      duration=duration,
+      width=width,
+      height=height,
+      thumbnail=thumbnail,
+      has_spoiler=mark,
+      **kwargs
+    )
+    v = m.animation
+    data[pid] = [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id]
+  data.save()
   
   
-async def send_photos(update, context, bar, pid, res, origin, caption, mark):
+async def send_photos(update, res, origin, mark, msg, bar):
   message = update.message
-  bot = context.bot
+  pid = res['illustId']
   imgUrl = res["urls"]["regular"]
   if origin:
     imgUrl = res["urls"]["original"]
@@ -215,7 +225,7 @@ async def send_photos(update, context, bar, pid, res, origin, caption, mark):
         "图片获取失败",
         reply_to_message_id=message.message_id
       )
-      raise Exception(f'p{i} 图片获取失败')
+      raise PluginException(f'p{i} 图片获取失败')
     
     bar.add(1)
     return media
@@ -232,13 +242,13 @@ async def send_photos(update, context, bar, pid, res, origin, caption, mark):
   k = kwargs.copy()
   k.update({
     'media': result[0],
-    'caption': caption, 
+    'caption': msg, 
     'parse_mode': 'HTML',
   })
   ms.append(t(**k))
   for i in result[1:]:
     k = kwargs.copy()
-    k['media'] = ai
+    k['media'] = i
     ms.append(t(**k))
     
   await update.message.reply_chat_action(action='upload_photo')
@@ -261,8 +271,41 @@ async def send_photos(update, context, bar, pid, res, origin, caption, mark):
       data[name] = tt.file_id
     data.save()
   except Exception:
-    raise Exception("发送失败")
+    logger.warning(traceback.format_exc())
+    raise PluginException("发送失败")
 
 
-async def send_telegraph(update, context, res):
-  pass
+async def send_telegraph(update, res):
+  pid = res['illustId']
+  imgUrl = res["urls"]["original"]
+  content = []
+  for i in range(res['pageCount']):
+    content.append({
+      'tag': 'img',
+      'attrs': {
+        'src': imgUrl.replace("_p0", f"_p{i}"),
+      },
+    })
+ 
+  url = await util.telegraph.createPage(f"[pixiv] {pid} {res['illustTitle']}", content)
+  with util.Data('urls') as data:
+    data[pid] = url
+    
+  msg = (
+    f"标题: {res['illustTitle']}\n"
+    f"预览: {url}\n"
+    f"作者: <a href=\"https://www.pixiv.net/users/{res['userId']}/\">{res['userName']}</a>\n"
+    f"数量: {res['pageCount']}\n"
+    f"原链接: https://www.pixiv.net/artworks/{pid}"
+  )
+  await update.message.reply_text(
+    text=msg,
+    parse_mode='HTML',
+    reply_to_message_id=update.message.message_id,
+    link_preview_options=LinkPreviewOptions(
+      url=url,
+      prefer_large_media=True,
+      show_above_text=False,
+    ),
+  )
+  

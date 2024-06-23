@@ -66,8 +66,11 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) 
       
   for i in config.commands:
     if (
-      i.private_pattern is not None and str(message.chat.type) == "private" and re.search(i.private_pattern, text)
-      or i.pattern is not None and re.search(i.pattern, text)
+      text 
+      and (
+        (i.private_pattern is not None and str(message.chat.type) == "private" and re.search(i.private_pattern, text))
+        or (i.pattern is not None and re.search(i.pattern, text))
+      )
     ):
       task = loop.create_task( i.func(update, context, text) )
       task.add_done_callback(callback(context))
@@ -78,14 +81,13 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) 
 async def echo(update, context) -> None:
   message = update.message
   # logger.info(message)
-  if (attr := getattr(message, 'photo', None)):
-    logger.info(f'photo file_id: {attr[-1].file_id}')
-  for i in ['video', 'audio', 'document', 'sticker']:
-    if (attr := getattr(message, i, None)):
-      logger.info(f'{i} file_id: {attr.file_id}')
-  
-  if not message or message.chat.type != "private":
-    return
+  if message and message.chat.type == "private":
+    logger.info(f'chat_id: {message.chat.id}, message_id: {message.id}')
+    if (attr := getattr(message, 'photo', None)):
+      logger.info(f'photo file_id: {attr[-1].file_id}')
+    for i in ['video', 'audio', 'document', 'sticker']:
+      if (attr := getattr(message, i, None)):
+        logger.info(f'{i} file_id: {attr.file_id}')
   
   asyncio.set_event_loop(loop)
   for i in config.commands:
