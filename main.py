@@ -77,14 +77,15 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE, text=None) 
 
 async def echo(update, context) -> None:
   message = update.message
+  # logger.info(message)
   if (attr := getattr(message, 'photo', None)):
     logger.info(f'photo file_id: {attr[-1].file_id}')
-  for i in ['video', 'audio', 'document']:
+  for i in ['video', 'audio', 'document', 'sticker']:
     if (attr := getattr(message, i, None)):
       logger.info(f'{i} file_id: {attr.file_id}')
   
   if not message or message.chat.type != "private":
-      return
+    return
   
   asyncio.set_event_loop(loop)
   for i in config.commands:
@@ -93,11 +94,7 @@ async def echo(update, context) -> None:
 
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Parses the CallbackQuery and updates the message text."""
     query = update.callback_query
-
-    # CallbackQueries need to be answered, even if no notification to the user is needed
-    # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
     await query.answer()
 
     for i in config.buttons:
@@ -106,7 +103,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the inline query."""
     query: str = update.inline_query.query
     if query is None : return
     tasks = []
@@ -194,7 +190,7 @@ async def main():
     if i.cmd != '':
       app.add_handler(CommandHandler(i.cmd, i.func))
   
-  app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL | filters.AUDIO, echo))
+  app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL | filters.AUDIO | filters.Sticker.ALL, echo))
   app.add_handler(MessageHandler(filters.TEXT, handle))
   app.add_handler(InlineQueryHandler(inline_query))
   app.add_handler(CallbackQueryHandler(button))

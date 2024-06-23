@@ -32,8 +32,8 @@ class Command:
     def wrapper(update, context, text=None, *w_args, **w_kwargs):
         if (
           text is None and 
-          hasattr(update, 'message') and 
-          hasattr(update.message, 'text')
+          getattr(update, 'message', None) and 
+          getattr(update.message, 'text', None)
         ):
           text = (
               update.message.text

@@ -10,11 +10,12 @@ from telegram import (
 )
 import re
 import os
+import asyncio
 
 import util
 from util.log import logger
 from util.progress import Progress
-from plugin import handler, inline_handler, button_handler
+from plugin import handler, button_handler
 from .data_source import headers, parsePidMsg, getAnime
 
 
@@ -55,163 +56,49 @@ async def _pixiv(update, context, text=None):
   
   mid = await message.reply_text(
     "请等待...",
-    reply_to_message_id=update.message.message_id,
+    reply_to_message_id=message.message_id,
   )
   try:
     url = f"https://www.pixiv.net/ajax/illust/{pid}"
     r = await util.get(url, headers=headers)
   except Exception:
-    return await update.message.reply_text(
+    return await message.reply_text(
         "连接超时",
-        reply_to_message_id=update.message.message_id,
+        reply_to_message_id=message.message_id,
     )
   res = r.json()
   if res["error"]:
-    return await update.message.reply_text(
+    return await message.reply_text(
       '错误: ' + res["message"],
-      reply_to_message_id=update.message.message_id,
+      reply_to_message_id=message.message_id,
     )
     
   res = res['body']
   msg = parsePidMsg(res, hide)
   if res['illustType'] == 2:
-    origin = False
-    await message.reply_chat_action(action='upload_video')
-    animations = util.Data('animations')
-    if not (info := animations[pid]):
-      anime = await getAnime(pid)
-      if not anime:
-        return await message.reply_text(
-          '生成动图失败',
-          reply_to_message_id=update.message.message_id,
-        )
-      info = util.videoInfo(anime)
-    animation, duration, width, height, thumbnail = tuple(info)
-    m = await message.reply_animation(
-      animation=animation,
-      duration=duration,
-      width=width,
-      height=height,
-      thumbnail=thumbnail,
-      caption=msg,
-      parse_mode='HTML',
-      has_spoiler=mark,
-      reply_to_message_id=update.message.message_id,
-    )
-    v = m.animation
-    animations[pid] = [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id]
-    animations.save()
-    await bot.delete_message(
-      chat_id=message.chat.id, message_id=mid.message_id
-    )
-    
+    await send_animation(update, context, pid, mid, origin)
   else:
-    imgUrl = res["urls"]["regular"]
-    if origin:
-      imgUrl = res["urls"]["original"]
     count = res["pageCount"]
-    piece = 10
-    pcount = (count - 1) // piece + 1
-    
-    photos = util.Photos()
-    documents = util.Documents()
-    for p in range(pcount):
-      await update.message.reply_chat_action(action='upload_photo')
-      bar = Progress(
-        bot, mid, 
-        "正在获取 p" + f"{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}",
-      )
-      ms = []
-      t = documents if origin else photos
-      for i in range(p * piece, min((p + 1) * piece, count)):
-        url = imgUrl.replace("_p0", f"_p{i}")
-        tip = (
-          f"\n{p * piece + 1} ~ {min((p + 1) * piece, count)} / {count}"
-          if p > 0
-          else ""
-        )
-        name = f"{pid}_p{i}"
-        if not origin:
-          name += '_regular'
-        if not (media := t[name]):
-          try:
-            img = await util.getImg(
-              url, 
-              saveas=name, 
-              ext=True, 
-              headers=headers,
-            )
-            if not origin:
-              ext = os.path.splitext(img)[-1]
-              img = util.resizePhoto(img)
-              media = util.img2bytes(img, ext)
-            else:
-              media = open(img, 'rb')
-          except Exception:
-            logger.warning(traceback.format_exc())
-            return await update.message.reply_text(
-              tip + "图片获取失败",
-              reply_to_message_id=update.message.message_id,
-            )
-          else:
-            bar.add(90 // min(piece, count - p * piece))
-        
-        caption = None
-        if len(ms) == 0:
-          caption = msg if p == 0 else tip
-        
-        if not origin:
-          ms.append(
-            InputMediaPhoto(
-              media=media,
-              caption=caption,
-              parse_mode="HTML",
-              has_spoiler=mark,
-            )
-          )
-        else:
-          ms.append(
-            InputMediaDocument(
-              media=media,
-              caption=caption,
-              parse_mode="HTML",
-            )
-          )
-  
+    bar = Progress(
+      bot, mid, total=count,
+      prefix=f"正在获取 p1 ~ {count}",
+    )
+    if count < 11:
       try:
-        m = await update.message.reply_media_group(
-          media=ms,
-          reply_to_message_id=update.message.message_id,
-          read_timeout=120,
-          write_timeout=120,
-          connect_timeout=120,
-          pool_timeout=120,
+        await send_photos(update, context, bar, pid, res, origin, msg, mark)
+      except Exception as e:
+        logger.warning(traceback.format_exc())
+        return await bot.edit_message_text(
+          text=str(e),
+          chat_id=message.chat.id,
+          message_id=mid.message_id,
         )
         
-        for i in range(0, min(piece, count - p * piece)):
-          ii = p * piece + i
-          name = f"{pid}_p{ii}"
-          if not origin:
-            name += '_regular'
-          tt = m[i].document if origin else m[i].photo[-1]
-          t[name] = tt.file_id
-        t.save()
-      except Exception:
-        logger.warning(traceback.format_exc())
-        logger.info(msg)
-        await update.message.reply_text(
-          tip + "发送失败",
-          reply_to_message_id=update.message.message_id,
-        )
-  
       await bot.delete_message(
-        chat_id=update.message.chat_id, message_id=mid.message_id
+        chat_id=message.chat_id, message_id=mid.message_id
       )
-      if p < pcount - 1:
-        mid = await update.message.reply_text(
-            "请等待...",
-            reply_to_message_id=update.message.message_id,
-        )
+    else:
+      await send_telegraph(update, context, res, mid)
   
   if str(message.chat.type) != "private":
     return
@@ -243,9 +130,9 @@ async def _pixiv(update, context, text=None):
     ),
   ]]
   reply_markup = InlineKeyboardMarkup(keyboard)
-  await update.message.reply_text(
+  await message.reply_text(
     "获取完成", 
-    reply_to_message_id=update.message.message_id,
+    reply_to_message_id=message.message_id,
     reply_markup=reply_markup,
   )
   
@@ -262,3 +149,120 @@ async def _(update, context, query):
   await message.edit_reply_markup(reply_markup=None)
   await _pixiv(_update, context, query.data)
   
+  
+async def send_animation(update, context, pid, mid, origin):
+  message = update.message
+  bot = context.bot
+  await update.message.reply_chat_action(action='upload_video')
+  animations = util.Data('animations')
+  if not (info := animations[pid]):
+    anime = await getAnime(pid)
+    if not anime:
+      return await message.reply_text(
+        '生成动图失败',
+        reply_to_message_id=message.message_id,
+      )
+    info = util.videoInfo(anime)
+  animation, duration, width, height, thumbnail = tuple(info)
+  m = await message.reply_animation(
+    animation=animation,
+    duration=duration,
+    width=width,
+    height=height,
+    thumbnail=thumbnail,
+    caption=msg,
+    parse_mode='HTML',
+    has_spoiler=mark,
+    reply_to_message_id=update.message.message_id,
+  )
+  v = m.animation
+  animations[pid] = [v.file_id, v.duration, v.width, v.height, v.thumbnail.file_id]
+  animations.save()
+  await bot.delete_message(
+    chat_id=message.chat.id, message_id=mid.message_id
+  )
+  
+  
+async def send_photos(update, context, bar, pid, res, origin, caption, mark):
+  message = update.message
+  bot = context.bot
+  imgUrl = res["urls"]["regular"]
+  if origin:
+    imgUrl = res["urls"]["original"]
+  count = res["pageCount"]
+  data = util.Documents() if origin else util.Photos()
+  
+  async def get_img(i):
+    nonlocal origin, data
+    url = imgUrl.replace("_p0", f"_p{i}")
+    name = f"{pid}_p{i}"
+    if not origin:
+      name += '_regular'
+    if media := data[name]:
+      return media
+      
+    try:
+      img = await util.getImg(url, saveas=name, ext=True, headers=headers)
+      if not origin:
+        ext = os.path.splitext(img)[-1]
+        img = util.resizePhoto(img)
+        media = util.img2bytes(img, ext)
+      else:
+        media = open(img, 'rb')
+    except Exception:
+      logger.warning(traceback.format_exc())
+      await update.message.reply_text(
+        "图片获取失败",
+        reply_to_message_id=message.message_id
+      )
+      raise Exception(f'p{i} 图片获取失败')
+    
+    bar.add(1)
+    return media
+  
+  tasks = [get_img(i) for i in range(count)]
+  result = await asyncio.gather(*tasks)
+  ms = []
+  t = InputMediaDocument if origin else InputMediaPhoto
+  
+  kwargs = {}
+  if not origin:
+    kwargs['has_spoiler'] = mark
+  
+  k = kwargs.copy()
+  k.update({
+    'media': result[0],
+    'caption': caption, 
+    'parse_mode': 'HTML',
+  })
+  ms.append(t(**k))
+  for i in result[1:]:
+    k = kwargs.copy()
+    k['media'] = ai
+    ms.append(t(**k))
+    
+  await update.message.reply_chat_action(action='upload_photo')
+  
+  try:
+    m = await update.message.reply_media_group(
+      media=ms,
+      reply_to_message_id=update.message.message_id,
+      read_timeout=120,
+      write_timeout=120,
+      connect_timeout=120,
+      pool_timeout=120,
+    )
+    
+    for i in range(count):
+      name = f"{pid}_p{i}"
+      if not origin:
+        name += '_regular'
+      tt = m[i].document if origin else m[i].photo[-1]
+      data[name] = tt.file_id
+    data.save()
+  except Exception:
+    raise Exception("发送失败")
+
+
+async def send_telegraph(update, context, res):
+  pass

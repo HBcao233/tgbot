@@ -20,10 +20,10 @@ from .data_source import headers, parseEidSMsg, parseEidGMsg, parsePage
 from util.progress import Progress
 
 
-private_pattern = r'(?:https?://)?(e[x-])hentai\.org/([sg])/([0-9a-z]+)/([0-9a-z-]+)'
+_pattern = r'(?:https?://)?(e[x-])hentai\.org/([sg])/([0-9a-z]+)/([0-9a-z-]+)'
 @handler('eid',
-  private_pattern=private_pattern,
-  pattern=r"eid "+private_pattern,
+  private_pattern='^'+_pattern,
+  pattern=r"eid "+_pattern,
   info="e站爬取 /eid <url> [hide] [mark]"
 )
 async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
@@ -40,7 +40,7 @@ async def eid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
       nocache = True
   logger.info(f"text: {text}, mark: {mark}")
 
-  if not (match := re.search(private_pattern, text)):
+  if not (match := re.match(_pattern, text)):
     return await update.message.reply_text("请输入e站 url")
   
   arr = [match.group(i) for i in range(1, 5)]
