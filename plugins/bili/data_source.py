@@ -49,11 +49,11 @@ async def getVideo(bvid, aid, cid):
   result = await asyncio.gather(
     util.getImg(
       video_url,
-      headers=headers,
+      headers=dict(**headers, Referer=f'https://www.bilibili.com/video/{bvid}'),
     ), 
     util.getImg(
       audio_url,
-      headers=headers,
+      headers=dict(**headers, Referer=f'https://www.bilibili.com/video/{bvid}'),
     ),
   ) 
   path = util.getCache(f'{bvid}.mp4')

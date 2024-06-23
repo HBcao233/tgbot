@@ -2,7 +2,7 @@
 # description: Starts and stops HBcaobot.
 # author: HBcao
 
-root=`dirname \`readlink $0\``;
+root=$(dirname $(readlink $0));
 command=("python3 ${root}/main.py");
 k=${command[0]}
 
