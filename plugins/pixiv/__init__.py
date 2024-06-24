@@ -61,7 +61,7 @@ async def _pixiv(update, context, text=None):
   )
   try:
     url = f"https://www.pixiv.net/ajax/illust/{pid}"
-    r = await util.get(url, headers=headers)
+    r = await util.get(url, headers=dict(**headers, referer=f'https://www.pixiv.net/artworks/{pid}'))
   except Exception:
     return await message.reply_text(
         "连接超时",
@@ -69,6 +69,7 @@ async def _pixiv(update, context, text=None):
     )
   res = r.json()
   if res["error"]:
+    logger.error(r.text)
     return await message.reply_text(
       '错误: ' + res["message"],
       reply_to_message_id=message.message_id,
@@ -76,7 +77,6 @@ async def _pixiv(update, context, text=None):
     
   res = res['body']
   msg = parsePidMsg(res, hide)
-  flag = False
   try:
     if res['illustType'] == 2:
       await send_animation(update, pid, origin, mark, msg)
@@ -90,7 +90,7 @@ async def _pixiv(update, context, text=None):
         await send_photos(update, res, origin, mark, msg, bar)
       else:
         await send_telegraph(update, res)
-        flag = True
+        return
   except PluginException as e:
     return await bot.edit_message_text(
       text=str(e),
@@ -102,7 +102,7 @@ async def _pixiv(update, context, text=None):
       
   await bot.delete_message(chat_id=message.chat.id, message_id=mid.message_id)
   
-  if str(message.chat.type) != "private" or flag:
+  if str(message.chat.type) != "private":
     return
   keyboard = [[
     InlineKeyboardButton(

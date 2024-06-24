@@ -4,9 +4,11 @@ from telegram import (
   Update,
   LinkPreviewOptions,
   InputMediaPhoto,
+  InputMediaDocument,
   InlineKeyboardButton,
   InlineKeyboardMarkup,
 )
+import os
 
 import config
 import util
@@ -111,20 +113,31 @@ async def kid(update, context, text):
     caption = None
     if i == 0:
       caption = msg
+    url = ai['thumbnail']
+    ext = os.path.splitext(url)[-1]
+    if ext == '.gif':
+      url = ai['url']
     img = await util.getImg(
-      ai['thumbnail'], 
+      url, 
       saveas=f'{source}_{_kid}_p{i}',
       ext=True,
     )
-    util.resizePhoto(img, saveas=img)
-    ms.append(
-      InputMediaPhoto(
-        media=open(img, 'rb'),
+    if ext != '.gif':
+      img = util.resizePhoto(img)
+      media = util.img2bytes(img, ext)
+      ms.append(InputMediaPhoto(
+        media=media,
         caption=caption,
         parse_mode="HTML",
         has_spoiler=mark,
-      )
-    )
+      ))
+    else:
+      media = open(img, 'rb')
+      ms.append(InputMediaDocument(
+        media=media,
+        caption=caption,
+        parse_mode="HTML",
+      ))
       
   try:
     m = await message.reply_media_group(
