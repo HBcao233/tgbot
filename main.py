@@ -21,8 +21,7 @@ import util
 from util.log import logger
 from plugin import load_plugins, handler
 
-import nest_asyncio
-nest_asyncio.apply()
+
 loop = asyncio.new_event_loop()
 
 

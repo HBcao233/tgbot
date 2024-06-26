@@ -1,11 +1,9 @@
+python>=3.9
 python-telegram-bot[socks]==20.3
 python-telegram-bot[job-queue]==20.3
-httpx
+httpx[http2]
 python-dotenv
-nest_asyncio
 ujson
 python-dateutil
 bs4
 opencv-python
-qrcode
-protobuf
