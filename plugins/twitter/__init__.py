@@ -79,11 +79,7 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
     if media["type"] == "photo":
       url = media["url"]
       md5 = media['md5']
-      img = await util.getImg(
-        url, 
-        headers=headers,
-        ext="png"
-      )
+      img = await util.getImg(url, headers=headers, ext=True)
       photo = open(img, 'rb')
       add = InputMediaPhoto(
         media=photo,
@@ -124,6 +120,7 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
         reply_to_message_id=update.message.message_id,
       )
     except Exception:
+      logger.warning('获取预览图失败')
       logger.warning(traceback.format_exc())
     
   # 发送

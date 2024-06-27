@@ -7,6 +7,7 @@ import util
 import util.string as string
 from util.log import logger
 import util.html2image as html2image
+from .data_source import headers
 
 
 async def getPreview(res, medias, full_text, time):
@@ -17,7 +18,7 @@ async def getPreview(res, medias, full_text, time):
   name = user['name']
   username = '@' + user['screen_name']
   profile = user['profile_image_url_https']
-  profile_img = await util.getImg(profile)
+  profile_img = await util.getImg(profile, headers=headers, ext=True)
   
   full_text = full_text.replace('\n', '<br>')
   arr = full_text.split('<br>')
@@ -37,7 +38,7 @@ async def getPreview(res, medias, full_text, time):
     ai = media['md5']
     img = util.getCache(ai)
     if not os.path.isfile(img):
-      await util.getImg(media['url'])
+      await util.getImg(media['url'], headers=headers, ext=True)
     if media['type'] == 'photo':
       medias_html += f'<div class="media"><img src="{img}" /></div>'
     else:

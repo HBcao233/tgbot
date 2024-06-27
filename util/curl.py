@@ -14,60 +14,61 @@ from .file import getCache
 async def request(
     method, url, *, params=None, data=None, proxy=False, headers=None, **kwargs
 ):
-    p = urllib.parse.urlparse(url)
-    _headers = {
-       "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",
-       'Referer': p.scheme + '://' + p.netloc + '/',
-       'host': p.netloc,
-    }
-    headers = dict(_headers, **headers) if headers else None
-    client = httpx.AsyncClient(
-        proxies=config.proxies if proxy else None, 
-        verify=False
-    )
-    # logger.info(headers)
-    
+  p = urllib.parse.urlparse(url)
+  _headers = {
+     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",
+     'Referer': p.scheme + '://' + p.netloc + '/',
+     'host': p.netloc,
+  }
+  headers = dict(_headers, **headers) if headers else None
+  client = httpx.AsyncClient(
+      proxies=config.proxies if proxy else None, 
+      verify=False
+  )
+  # logger.info(headers)
+  
+  r = await client.request(
+    method, url=url, headers=headers, data=data, params=params, 
+    timeout=httpx.Timeout(connect=None, read=None, write=None, pool=None),
+    **kwargs
+  )
+  
+  if params is None: params = dict()
+  if type(params) == dict: params = urllib.parse.urlencode(params)
+  params = params.strip()
+  if params != '':
+    if '?' in url:
+      url += '&' + params
+    else:
+      url += '?' + params
+  if r.status_code == 302:
+    url = r.headers['Location']
+    if 'http' not in url: url = p.scheme + '://' + p.netloc + '/' + url
     r = await client.request(
-      method, url=url, headers=headers, data=data, params=params, 
+      method, url=url, headers=headers, data=data, 
       timeout=httpx.Timeout(connect=None, read=None, write=None, pool=None),
       **kwargs
     )
-    
-    if params is None: params = dict()
-    if type(params) == dict: params = urllib.parse.urlencode(params)
-    params = params.strip()
-    if params != '':
-      if '?' in url:
-        url += '&' + params
-      else:
-        url += '?' + params
-    if r.status_code == 302:
-      url = r.headers['Location']
-      if 'http' not in url: url = p.scheme + '://' + p.netloc + '/' + url
-      r = await client.request(
-        method, url=url, headers=headers, data=data, 
-        timeout=httpx.Timeout(connect=None, read=None, write=None, pool=None),
-        **kwargs
-      )
-    t = logger.info
-    if r.status_code != 200:
-      t = logger.warning
-    if url != 'https://telegra.ph/upload':
-      t(f"{method} {url} code: {r.status_code}")
-    await client.aclose()
-    return r
+  t = logger.info
+  if r.status_code != 200:
+    t = logger.warning
+  if url != 'https://telegra.ph/upload':
+    t(f"{method} {url} code: {r.status_code}")
+  await client.aclose()
+  return r
 
 
 async def get(url, *, proxy=False, headers=None, params=None, data=None, **kwargs):
-    return await request(
-        "GET", url, params=params, data=data, proxy=proxy, headers=headers, **kwargs
-    )
+  return await request(
+      "GET", url, params=params, data=data, proxy=proxy, headers=headers, **kwargs
+  )
 
 
 async def post(url, *, proxy=False, headers=None, params=None, data=None, **kwargs):
-    return await request(
-        "POST", url, params=params, data=data, proxy=proxy, headers=headers, **kwargs
-    )
+  return await request(
+      "POST", url, params=params, data=data, proxy=proxy, headers=headers, **kwargs
+  )
+  
 
 async def getImg(
     url, *, proxy=True, cache=True, path=None, headers=None, rand=False, ext: Union[bool, str]=False, saveas=None, **kwargs
@@ -130,12 +131,12 @@ async def getImg(
         f = arr[0]
         if not ex:
           ex = '.' + arr[1]
-          
+        
       if path is None:
-          path = getCache(f + ex)
+        path = getCache(f + ex)
       
       if not os.path.isfile(path) or not cache:
-        logger.info(f"尝试获取图片 {url}, proxy: {proxy}, headers: {headers} , saveas {f}{ex}")
+        logger.info(f"尝试获取图片 {url}, proxy: {proxy}, headers: {headers} , saveas {os.path.basename(path)}")
         p = urllib.parse.urlparse(url)
         _headers = {
           "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1517.62",
