@@ -67,8 +67,8 @@ async def kid(update, context, text):
     )
   
   # uid = user_url.split('/')[-1]
-  if source == 'fanbox' and len(files) > 1:
-    files = files[1:]
+  # if source == 'fanbox' and len(files) > 1:
+  #  files = files[1:]
     
   if len(files) > 10:
     key = f'kemono/{source}/{_kid}'

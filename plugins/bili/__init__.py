@@ -125,8 +125,14 @@ async def _(update, context, text):
       if i['page'] == p:
         cid = i['cid']
   logger.info(f'{bvid} av{aid} P{p} cid: {cid}')
+  title = (
+    res['title']
+    .replace('&', '&gt;')
+    .replace('<', '&lt;')
+    .replace('>', '&gt;')
+  )
   msg = (
-    f"<a href=\"https://www.bilibili.com/video/{bvid}{p_url}\">{res['title']}{p_tip}</a> - "
+    f"<a href=\"https://www.bilibili.com/video/{bvid}{p_url}\">{title}{p_tip}</a> - "
     f"<a href=\"https://space.bilibili.com/{res['owner']['mid']}\">{res['owner']['name']}</a>"
   )
   

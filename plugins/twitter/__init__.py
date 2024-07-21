@@ -23,7 +23,6 @@ from util.log import logger
 from plugin import handler, inline_handler, button_handler
 
 from .data_source import headers, get_twitter, parseTidMsg, parseMedias
-from .getPreview import getPreview
 
 
 _pattern = r'(?:^|^(?:tid|Tid|TID) ?|(?:https?://)?(?:twitter|x|vxtwitter|fxtwitter)\.com/[a-zA-Z0-9_]+/status/)(\d{13,})(?:[^0-9].*)?$'
@@ -47,16 +46,11 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
   tid = match.group(1)
   hide = False
   mark = False
-  nopreview = False
   arr = text.split(" ")
   if "hide" in arr:
     hide = True
   if "mark" in arr or '遮罩' in arr:
     mark = True
-  if 'nopreview' in arr:
-    nopreview = True
-  if str(message.chat.type) != "private":
-    nopreview = True
   logger.info(f"{tid = }, {hide = }, {mark = }")
   
   res = await get_twitter(tid)
@@ -112,17 +106,6 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
       )
       ms.append(add)
   
-  if not nopreview:
-    try:
-      img = await getPreview(res, medias, full_text, time)
-      await message.reply_photo(
-        photo=open(img, 'rb'),
-        reply_to_message_id=update.message.message_id,
-      )
-    except Exception:
-      logger.warning('获取预览图失败')
-      logger.warning(traceback.format_exc())
-    
   # 发送
   try:
     m = await message.reply_media_group(
@@ -155,11 +138,11 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
   if not mark:
     keyboard[0].append(InlineKeyboardButton(
       "添加遮罩", 
-      callback_data=f"tid {tid} {'hide' if hide else ''} mark nopreview"
+      callback_data=f"tid {tid} {'hide' if hide else ''} mark"
     ))
   keyboard[0].append(InlineKeyboardButton(
     "详细描述" if hide else "简略描述", 
-    callback_data=f"tid {tid} {'hide' if not hide else ''} {'mark' if mark else ''} nopreview"
+    callback_data=f"tid {tid} {'hide' if not hide else ''} {'mark' if mark else ''}"
   ))
   reply_markup = InlineKeyboardMarkup(keyboard)
   mid = await message.reply_text(
@@ -194,16 +177,23 @@ async def _(update, context, query):
 
 @inline_handler(r"^(https://(twitter|x|vxtwitter|fxtwitter).com/.*/status/)?((tid|Tid|TID) ?)?\d{13,}(\?.*)?(#.*)?( ?hide ?)?( ?mark ?)?$")
 async def _(update, context, text):
-  results = []
-  tid, hide, mark = parseText(text)
+  if not (match := re.search(_pattern, text)):
+    return await update.inline_query.answer()
+  tid = match.group(1)
+  hide = False
+  mark = False
+  arr = text.split(" ")
+  if "hide" in arr:
+    hide = True
+  if "mark" in arr or '遮罩' in arr:
+    mark = True
   logger.info(f"{tid = }, {hide = }, {mark = }")
-  if tid == "":
-      return
-
+    
+  results = []
   res = await get_twitter(tid)
   if type(res) == str:
-      logger.info(res)
-      return await update.inline_query.answer([])
+      logger.warning(res)
+      return await update.inline_query.answer()
 
   tweet = res["legacy"]
   msg, full_text, time = parseTidMsg(res)
@@ -211,83 +201,62 @@ async def _(update, context, text):
   medias = parseMedias(tweet)
   
   count = 0
-  try:
-    img = await getPreview(res, medias, full_text, time)
-    m = await context.bot.send_photo(
-      chat_id=config.echo_chat_id,
-      photo=open(img, 'rb'),
-    )
-    await context.bot.delete_message(
-      chat_id=config.echo_chat_id,
-      message_id=m.message_id
-    )
-    photo_file_id = m.photo[-1].file_id
-  except Exception:
-    logger.warning(traceback.format_exc())
-  else: 
-    count += 1
+  if len(medias) == 0:
+    count = 1
     results.append(
-        InlineQueryResultCachedPhoto(
-            id=str(uuid4()),
-            photo_file_id=photo_file_id,
-            # caption=msg,
-            # parse_mode="HTML",
-        )
-    )
-  
-  if len(medias) > 0:
-      for media in medias:
-          if media["type"] == "photo":
-              count += 1
-              results.append(
-                  InlineQueryResultPhoto(
-                      id=str(uuid4()),
-                      photo_url=media["url"],
-                      thumbnail_url=media["thumbnail_url"],
-                      caption=msg,
-                      parse_mode="HTML",
-                  )
-              )
-          else:
-              count += 1
-              variants = media['variants']
-              results.append(
-                  InlineQueryResultVideo(
-                      id=str(uuid4()),
-                      video_url=media["url"],
-                      thumbnail_url=media["thumbnail_url"],
-                      title=msg,
-                      mime_type="video/mp4",
-                      caption=msg,
-                      parse_mode="HTML",
-                      description=f'最佳质量(bitrate: {variants[0]["bitrate"]}, 若预览图为空，请勿选择)',
-                  )
-              )
-              
-              if len(variants) >= 2:
-                  results.append(
-                      InlineQueryResultVideo(
-                          id=str(uuid4()),
-                          video_url=variants[1]["url"],
-                          title=msg,
-                          mime_type="video/mp4",
-                          thumbnail_url=media["thumbnail_url"],
-                          caption=msg,
-                          parse_mode="HTML",
-                          description=f'较高质量(bitrate: {variants[1]["bitrate"]})',
-                      )
-                  )
-  else:
-      count += 1
-      results.append(
-          InlineQueryResultArticle(
-              id=str(uuid4()),
-              title=msg,
-              input_message_content=InputTextMessageContent(
-                  msg, parse_mode="HTML"
-              ),
-          )
+      InlineQueryResultArticle(
+        id=str(uuid4()),
+        title=msg,
+        input_message_content=InputTextMessageContent(
+            msg, parse_mode="HTML"
+        ),
       )
+    )
+  else:
+    for media in medias:
+      if media["type"] == "photo":
+        count += 1
+        results.append(
+          InlineQueryResultPhoto(
+            id=str(uuid4()),
+            photo_url=media["url"],
+            thumbnail_url=media["thumbnail_url"],
+            title=count+1,
+            description=msg,
+            caption=msg,
+            parse_mode="HTML",
+          )
+        )
+      else:
+        count += 1
+        variants = media['variants']
+        results.append(
+          InlineQueryResultVideo(
+            id=str(uuid4()),
+            video_url=media["url"],
+            thumbnail_url=media["thumbnail_url"],
+            mime_type="video/mp4",
+            caption=msg,
+            parse_mode="HTML",
+            title=count+1,
+            description=f'最佳质量(bitrate: {variants[0]["bitrate"]}, 若预览图为空，请勿选择)',
+          )
+        )
+        
+        if len(variants) >= 2:
+          results.append(
+            InlineQueryResultVideo(
+              id=str(uuid4()),
+              video_url=variants[1]["url"],
+              mime_type="video/mp4",
+              thumbnail_url=media["thumbnail_url"],
+              caption=msg,
+              parse_mode="HTML",
+              title=f'{count+1}-2',
+              description=f'较高质量(bitrate: {variants[1]["bitrate"]})',
+            )
+          )
+    
       
   countFlag = count > 1
   btn_text = "获取" + ("遮罩" if mark else "全部") + ("(隐藏描述)" if hide else "")

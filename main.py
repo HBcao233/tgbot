@@ -216,5 +216,7 @@ async def main():
     
 if __name__ == "__main__":
   loop.run_until_complete(main())
-  loop.run_forever()
-  
+  try:
+    loop.run_forever()
+  finally:
+    loop.close()

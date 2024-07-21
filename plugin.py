@@ -30,20 +30,20 @@ class Command:
     
   def __call__(self, func):
     def wrapper(update, context, text=None, *w_args, **w_kwargs):
-        if (
-          text is None and 
-          getattr(update, 'message', None) and 
-          getattr(update.message, 'text', None)
-        ):
-          text = (
-              update.message.text
-              .replace("@"+config.bot.username, "")
-              .replace("/" + self.cmd, "")
-              .replace(self.cmd, "")
-              .replace("/start", "")
-              .strip()
-          )
-        return func(update, context, text, *w_args, **w_kwargs)
+      if (
+        text is None and 
+        getattr(update, 'message', None) and 
+        getattr(update.message, 'text', None)
+      ):
+        text = (
+            update.message.text
+            .replace("@"+config.bot.username, "")
+            .replace("/" + self.cmd, "")
+            .replace(self.cmd, "")
+            .replace("/start", "")
+            .strip()
+        )
+      return func(update, context, text, *w_args, **w_kwargs)
     return wrapper
 
 
@@ -67,10 +67,10 @@ class Button:
 
 
 def handler(cmd, **kwargs):
-    def deco(func):
-      config.commands.append(Command(cmd, func, **kwargs))
-      return func
-    return deco
+  def deco(func):
+    config.commands.append(Command(cmd, func, **kwargs))
+    return func
+  return deco
     
     
 def inline_handler(pattern, **kwargs):
