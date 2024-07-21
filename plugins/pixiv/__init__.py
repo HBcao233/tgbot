@@ -12,6 +12,7 @@ from telegram import (
 import re
 import os
 import asyncio
+from datetime import datetime
 
 import util
 from util.log import logger
@@ -89,8 +90,18 @@ async def _pixiv(update, context, text=None):
         )
         await send_photos(update, res, origin, mark, msg, bar)
       else:
-        await send_telegraph(update, res)
-        return
+        url, msg = await get_telegraph(res)
+        await bot.delete_message(chat_id=message.chat.id, message_id=mid.message_id)
+        return await message.reply_text(
+          text=msg,
+          parse_mode='HTML',
+          reply_to_message_id=message.message_id,
+          link_preview_options=LinkPreviewOptions(
+            url=url,
+            prefer_large_media=True,
+            show_above_text=False,
+          ),
+        )
   except PluginException as e:
     return await bot.edit_message_text(
       text=str(e),
@@ -275,21 +286,25 @@ async def send_photos(update, res, origin, mark, msg, bar):
     raise PluginException("发送失败")
 
 
-async def send_telegraph(update, res):
+async def get_telegraph(res):
+  data = util.Data('urls')
+  now = datetime.now()
   pid = res['illustId']
-  imgUrl = res["urls"]["original"]
-  content = []
-  for i in range(res['pageCount']):
-    content.append({
-      'tag': 'img',
-      'attrs': {
-        'src': imgUrl.replace("_p0", f"_p{i}"),
-      },
-    })
- 
-  url = await util.telegraph.createPage(f"[pixiv] {pid} {res['illustTitle']}", content)
-  with util.Data('urls') as data:
-    data[pid] = url
+  key = f'{pid}-{now:%m-%d}'
+  if not (url := data[key]):
+    imgUrl = res["urls"]["original"].replace('i.pximg.net', 'i.pixiv.re')
+    content = []
+    for i in range(res['pageCount']):
+      content.append({
+        'tag': 'img',
+        'attrs': {
+          'src': imgUrl.replace("_p0", f"_p{i}"),
+        },
+      })
+   
+    url = await util.telegraph.createPage(f"[pixiv] {pid} {res['illustTitle']}", content)
+    data[key] = url
+    data.save()
     
   msg = (
     f"标题: {res['illustTitle']}\n"
@@ -298,14 +313,5 @@ async def send_telegraph(update, res):
     f"数量: {res['pageCount']}\n"
     f"原链接: https://www.pixiv.net/artworks/{pid}"
   )
-  await update.message.reply_text(
-    text=msg,
-    parse_mode='HTML',
-    reply_to_message_id=update.message.message_id,
-    link_preview_options=LinkPreviewOptions(
-      url=url,
-      prefer_large_media=True,
-      show_above_text=False,
-    ),
-  )
+  return url, msg
   

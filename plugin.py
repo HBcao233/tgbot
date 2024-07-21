@@ -36,12 +36,12 @@ class Command:
         getattr(update.message, 'text', None)
       ):
         text = (
-            update.message.text
-            .replace("@"+config.bot.username, "")
-            .replace("/" + self.cmd, "")
-            .replace(self.cmd, "")
-            .replace("/start", "")
-            .strip()
+          update.message.text
+          .replace("@"+config.bot.username, "")
+          .replace("/" + self.cmd, "")
+          .replace(self.cmd, "")
+          .replace("/start", "")
+          .strip()
         )
       return func(update, context, text, *w_args, **w_kwargs)
     return wrapper
@@ -98,16 +98,16 @@ def load_plugin(name):
   
 def load_plugins(dir_name):
   for name in os.listdir(dir_name):
-      path = os.path.join(dir_name, name)
-      if os.path.isfile(path) and \
-              (name.startswith('_') or not name.endswith('.py')):
-          continue
-      if os.path.isdir(path) and \
-              (name.startswith('_') or not os.path.exists(
-                  os.path.join(path, '__init__.py'))):
-          continue
-      m = re.match(r'([_A-Z0-9a-z]+)(.py)?', name)
-      if not m:
-          continue
-      load_plugin(f'{dir_name}.{m.group(1)}')
+    path = os.path.join(dir_name, name)
+    if os.path.isfile(path) and \
+       (name.startswith('_') or not name.endswith('.py')):
+      continue
+    if os.path.isdir(path) and \
+       (name.startswith('_') or 
+        not os.path.exists(os.path.join(path, '__init__.py'))):
+      continue
+    m = re.match(r'([_A-Z0-9a-z]+)(.py)?', name)
+    if not m:
+      continue
+    load_plugin(f'{dir_name}.{m.group(1)}')
         
