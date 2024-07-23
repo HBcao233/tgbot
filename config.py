@@ -1,36 +1,41 @@
-import os
 import sys
+import os.path
 from dotenv import load_dotenv
 
-load_dotenv()
-env = dict(os.environ)
 
-token = env.get('token')
-base_url = env.get('base_url', 'https://api.telegram.org/bot')
-base_file_url = env.get('base_file_url', 'https://api.telegram.org/file/bot')
-
-echo_chat_id = int(env.get('echo_chat_id', 0))
-superadmin = [int(x) for x in env.get('superadmin', '').split(',') if x]
-
-telegraph_author_name = env.get('telegraph_author_name', '')
-telegraph_author_url = env.get('telegraph_author_url', '')
-telegraph_access_token = env.get('telegraph_access_token', '')
-
-botRoot = os.path.dirname(os.path.realpath(__file__))
-commands = []
-inlines = []
-buttons = []
-
-proxy_url = None
-proxies = {}
-if (port := env.get('proxy_port', '')) != '':
-  host = 'localhost'
-  if env.get('proxy_host', '') != '':
-    host = env.get('proxy_host', '')
-  config.proxy_url = f'http://{host}:{port}/'
-if proxy_url is not None:
-  config.proxies.update({
-    "http://": proxy_url,
-    "https://": proxy_url
-  })
+class Config:
+  commands = []
+  inlines = []
+  buttons = []
   
+  def __init__(self):
+    pass
+  
+  def init(self, path):
+    load_dotenv(dotenv_path=os.path.join(path, '.env'))
+    self.env = os.environ
+    self.token = self.env.get('token')
+    self.base_url = self.env.get('base_url', 'https://api.telegram.org/bot')
+    self.base_file_url = self.env.get('base_file_url', 'https://api.telegram.org/file/bot')
+    
+    self.echo_chat_id = int(self.env.get('echo_chat_id', 0))
+    self.superadmin = [int(x) for x in self.env.get('superadmin', '').split(',') if x]
+    
+    self.telegraph_author_name = self.env.get('telegraph_author_name', '')
+    self.telegraph_author_url = self.env.get('telegraph_author_url', '')
+    self.telegraph_access_token = self.env.get('telegraph_access_token', '')
+    
+    self.proxy_url = None
+    self.proxies = {}
+    if (port := self.env.get('proxy_port', '')) != '':
+      host = 'localhost'
+      if self.env.get('proxy_host', '') != '':
+        host = self.env.get('proxy_host', '')
+      self.proxy_url = f'http://{host}:{port}/'
+    if self.proxy_url is not None:
+      self.proxies.update({
+        "http://": self.proxy_url,
+        "https://": self.proxy_url
+      })
+    
+sys.modules[__name__] = Config()

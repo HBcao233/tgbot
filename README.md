@@ -1,12 +1,39 @@
 # tgbot
-一个Telegram机器人，可以解析pixiv.net, x.com, e-hentai.org, exhentai.org, kemono.su等
+一个 Telegram 机器人框架
+
+示例的 hbcao1bot 机器人可以解析 pixiv.net, x.com, e-hentai.org, exhentai.org, kemono.su 等发送至 tg
 
 demo: [@hbcao1bot](https://t.me/hbcao1bot)
 
+基于本框架的其他机器人: 
+
+传话机器人: https://github.com/HBcao233/tgbot2
+
+其他插件: https://github.com/HBcao233/tgbot-plugins
+
 ## 特别说明
 
-如果你在GitCode (https://gitcode.com) 看到本仓库，那么请点击该网站右侧简介下的GitHub徽标访问正确的GitHub仓库。因为GitCode上的仓库是由第三方在未经授权的情况下非法创建的，他们很有可能在其中植入病毒，从而感染你的计算机，并且可能会威胁到财产安全。如果该平台要求你输大电话号码或者什么密码以完成什么操作，那么千万不要输大，这很有可能会导致你的资金被盗。
+如果你在GitCode (https://gitcode.com) 看到本仓库，那么请点击该网站右侧简介下的GitHub徽标访问正确的GitHub仓库。因为GitCode上的仓库是由第三方在未经授权的情况下非法创建的，他们很有可能在其中植入病毒，从而感染你的计算机，并且可能会威胁到财产安全。如果该平台要求你输入电话号码或者什么密码以完成什么操作，那么千万不要输入，这很有可能会导致你的资金被盗。
 
+## 目录结构 Directory Structure
+本框架采取多应用架构, 拥有 .env 文件的目录会被判定为一个应用
+```
+tgbot
+├ hbcao1bot
+  ├ plugins: 插件存放目录
+  ├ .env: 机器人相关配置
+  └ data: 运行时产生的数据
+├ xxx:
+  ├ plugins: 插件存放目录
+  └ env: 机器人配置
+├ util: 工具类存放文件夹
+├ requirements.txt: py依赖描述文件
+├ tgbot.sh: 机器人管理脚本
+├ main.py: 入口文件
+├ config.py: 配置相关实现,
+├ plugin.py: 插件相关实现
+└ bot.py: bot相关实现
+```
 
 ## 安装 Installation
 ```

@@ -96,9 +96,10 @@ def load_plugin(name):
     logger.warning(traceback.print_exc())
   
   
-def load_plugins(dir_name):
-  for name in os.listdir(dir_name):
-    path = os.path.join(dir_name, name)
+def load_plugins():
+  dirpath = os.path.join(config.botRoot, 'plugins')
+  for name in os.listdir(dirpath):
+    path = os.path.join(dirpath, name)
     if os.path.isfile(path) and \
        (name.startswith('_') or not name.endswith('.py')):
       continue
@@ -109,5 +110,5 @@ def load_plugins(dir_name):
     m = re.match(r'([_A-Z0-9a-z]+)(.py)?', name)
     if not m:
       continue
-    load_plugin(f'{dir_name}.{m.group(1)}')
+    load_plugin(f'{config.botName}.plugins.{m.group(1)}')
         

@@ -79,7 +79,7 @@ async def getImg(
     Args:
         url: 图片url，或图片bytes
         proxy: 是否使用代理
-        path: 保存路径， 不填默认为 data/cache/{md5(url)}.cache
+        path: 保存路径 
         headers: 指定headers，如 p站图片需要{"Referer": "https://www.pixiv.net"}
         rand: 是否在文件结尾加入随机字符串bytes
         ext: 自动从url中获取文件后缀名
@@ -90,7 +90,6 @@ async def getImg(
     """
     if url is None or url == '': 
       return ''
-    if not os.path.exists('data/cache'): os.makedirs('data/cache')
     b = isinstance(url, bytes)
     
     if not b and url.find("file://") >= 0:
