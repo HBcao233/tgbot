@@ -1,5 +1,5 @@
 from .log import logger
-
+from . import bot
 from . import string
 from .string import (
   randStr,
@@ -34,6 +34,7 @@ from .curl import (
 )
 
 __all__ = [
+  'bot',
   'logger',
   'string',
   'randStr',
