@@ -37,10 +37,10 @@ class Command:
       ):
         text = (
           update.message.text
-          .replace("@"+config.bot.username, "")
-          .replace("/" + self.cmd, "")
-          .replace(self.cmd, "")
-          .replace("/start", "")
+          .strip("@"+config.bot.username)
+          .strip("/start")
+          .strip("/" + self.cmd)
+          .strip(self.cmd)
           .strip()
         )
       return func(update, context, text, *w_args, **w_kwargs)

@@ -75,13 +75,33 @@ stop(){
 }
 
 
-case $1 in
+arg1=$1
+arg2=$2
+case $arg2 in 
+start|restart|status|stop|log|cd)
+  t=$arg1
+  arg1=$arg2
+  arg2=$t
+  ;;
+esac
+
+case $arg1 in
 start)
-  if [ ${#bots[@]} = 1 ]; then
-    index=0
-  else
-    choose
-    read index
+  index=""
+  if [ -n $arg2 ]; then
+    for i in ${!bots[@]}; do 
+      if [ "${bots[$i]}" = "$arg2" ]; then
+        index=$i
+      fi
+    done
+  fi
+  if [ "$index" = "" ]; then
+    if [ ${#bots[@]} = 1 ]; then
+      index=0
+    else
+      choose
+      read index
+    fi
   fi
   stop $index
   start $index
@@ -109,16 +129,30 @@ status)
   status
   ;;
 log)
-  if [ ${#bots[@]} = 1 ]; then
-    index=0
+  index=""
+  if [ -n $arg2 ]; then
+    for i in ${!bots[@]}; do 
+      if [ "${bots[$i]}" = "$arg2" ]; then
+        index=$i
+        break
+      fi
+    done
+  fi
+  if [ "$index" = "" ]; then
+    ninput=$arg2
+    if [ ${#bots[@]} = 1 ]; then
+      index=0
+    else
+      choose
+      read index
+    fi
   else
-    choose
-    read index
+    ninput=$3
   fi
   re='^[0-9]+$'
   num=100
-  if [[ $2 =~ $re ]];then
-    num=$2
+  if [[ $ninput =~ $re ]];then
+    num=$arg2
   fi
   echo "查看 ${bots[$index]} 日志"
   nl ${root}/${bots[$index]}/bot.log | tail -n $num

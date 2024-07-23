@@ -88,7 +88,7 @@ async def _pixiv(update, context, text=None):
           bot, mid, total=count,
           prefix=f"正在获取 p1 ~ {count}",
         )
-        await send_photos(update, res, origin, mark, msg, bar)
+        await send_photos(update, context, res, origin, mark, msg, bar, mid)
       else:
         url, msg = await get_telegraph(res)
         await bot.delete_message(chat_id=message.chat.id, message_id=mid.message_id)
@@ -111,7 +111,7 @@ async def _pixiv(update, context, text=None):
   except Exception:
     logger.warning(traceback.format_exc())
       
-  await bot.delete_message(chat_id=message.chat.id, message_id=mid.message_id)
+  await bot.delete_message(chat_id=mid.chat.id, message_id=mid.message_id)
   
   if str(message.chat.type) != "private":
     return
@@ -204,7 +204,7 @@ async def send_animation(update, pid, origin, mark, msg):
   data.save()
   
   
-async def send_photos(update, res, origin, mark, msg, bar):
+async def send_photos(update, context, res, origin, mark, msg, bar, mid):
   message = update.message
   pid = res['illustId']
   imgUrl = res["urls"]["regular"]
@@ -273,17 +273,33 @@ async def send_photos(update, res, origin, mark, msg, bar):
       connect_timeout=120,
       pool_timeout=120,
     )
-    
-    for i in range(count):
-      name = f"{pid}_p{i}"
-      if not origin:
-        name += '_regular'
-      tt = m[i].document if origin else m[i].photo[-1]
-      data[name] = tt.file_id
-    data.save()
+  except telegram.error.RetryAfter as e:
+    sec = e.retry_after
+    await context.bot.edit_message_text(
+      text=f"遇到 RetryAfter 错误, 将在 {sec} 秒后重试",
+      chat_id=mid.chat.id,
+      message_id=mid.message_id,
+    )
+    await asyncio.sleep(sec)
+    m = await update.message.reply_media_group(
+      media=ms,
+      reply_to_message_id=update.message.message_id,
+      read_timeout=120,
+      write_timeout=120,
+      connect_timeout=120,
+      pool_timeout=120,
+    )
   except Exception:
     logger.warning(traceback.format_exc())
     raise PluginException("发送失败")
+    
+  for i in range(count):
+    name = f"{pid}_p{i}"
+    if not origin:
+      name += '_regular'
+    tt = m[i].document if origin else m[i].photo[-1]
+    data[name] = tt.file_id
+  data.save()
 
 
 async def get_telegraph(res):
