@@ -35,13 +35,13 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
   message = update.message
   if not (match := re.search(_pattern, text)):
     return await message.reply_text(
-        "用法: /tid <url/tid> [hide] [mark]\n"
-        "tid/url: 推文链接或status_id\n"
-        "hide: 隐藏信息，推文内容将只显示推文链接\n"
-        "mark: 添加遮罩\n"
-        "私聊小派魔时可以省略/tid，直接发送<url/tid> [hide] [mark]哦\n"
-        "或者使用@hbcao1bot <url/tid> [hide] [mark]作为内联模式发送~",
-        reply_to_message_id=message.message_id,
+      "用法: /tid <url/tid> [hide] [mark]\n"
+      "tid/url: 推文链接或status_id\n"
+      "hide: 隐藏信息，推文内容将只显示推文链接\n"
+      "mark: 添加遮罩\n"
+      "私聊小派魔时可以省略/tid，直接发送<url/tid> [hide] [mark]哦\n"
+      "或者使用@hbcao1bot <url/tid> [hide] [mark]作为内联模式发送~",
+      reply_to_message_id=message.message_id,
     )
   tid = match.group(1)
   hide = False

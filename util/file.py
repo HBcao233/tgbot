@@ -32,4 +32,7 @@ def getDataFile(name=''):
   return getFile("data/", name)
   
 def getCache(name=''):
+  path = getFile("data/cache/")
+  if not os.path.isdir(path):
+    os.mkdir(path)
   return getFile("data/cache/", name)

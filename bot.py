@@ -178,10 +178,14 @@ async def main(path):
     .get_updates_proxy(config.proxy_url)
     .base_url(config.base_url)
     .base_file_url(config.base_file_url)
+    .local_mode(config.local_mode)
     .build()
   )
+  config.app = app
   bot = app.bot
   config.bot = await bot.get_me()
+  logger.info(config.bot)
+  logger.info(f'local_mode: {bot.local_mode}')
   app.add_error_handler(error_handler)
 
   load_plugins()

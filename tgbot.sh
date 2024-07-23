@@ -152,7 +152,7 @@ log)
   re='^[0-9]+$'
   num=100
   if [[ $ninput =~ $re ]];then
-    num=$arg2
+    num=$ninput
   fi
   echo "查看 ${bots[$index]} 日志"
   nl ${root}/${bots[$index]}/bot.log | tail -n $num

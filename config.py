@@ -17,7 +17,9 @@ class Config:
     self.token = self.env.get('token')
     self.base_url = self.env.get('base_url', 'https://api.telegram.org/bot')
     self.base_file_url = self.env.get('base_file_url', 'https://api.telegram.org/file/bot')
-    
+    local_mode = self.env.get('local_mode', False)
+    self.local_mode = True if local_mode in ['1', 'true', 'True', 'T'] else False
+      
     self.echo_chat_id = int(self.env.get('echo_chat_id', 0))
     self.superadmin = [int(x) for x in self.env.get('superadmin', '').split(',') if x]
     
