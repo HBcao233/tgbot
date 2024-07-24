@@ -9,7 +9,7 @@ services:
       TELEGRAM_API_HASH: "APP_HASH"
       TELEGRAM_LOCAL: 1
     volumes:
-      - telegram-bot-api-data:/telegram-bot-api
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
     ports:
       - 8081:8081
   tgbot:
@@ -17,8 +17,7 @@ services:
     build: .
     command: python3 /tgbot/main.py hbcao1bot
     network_mode: "host"
-    external_links:
-      - telegram-bot-api
 
 volumes:
   telegram-bot-api-data:
+  
