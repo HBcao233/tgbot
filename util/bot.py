@@ -13,7 +13,7 @@ async def get_file(file_id, name=None):
   
   img = getCache(name)
   proc = await asyncio.create_subprocess_exec(
-    'docker', 'cp', f'telegram-bot-api-telegram-bot-api-1:{file_path}', img,
+    'docker', 'cp', f'telegram-bot-api:{file_path}', img,
   )
   await proc.wait()
   return img

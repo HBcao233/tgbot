@@ -1,6 +1,5 @@
-python>=3.9
-python-telegram-bot[socks]==20.3
-python-telegram-bot[job-queue]==20.3
+python-telegram-bot[socks]~=20.4
+python-telegram-bot[job-queue]~=20.4
 httpx[http2]
 python-dotenv
 ujson

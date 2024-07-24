@@ -2,7 +2,11 @@
 # description: Starts and stops HBcaobot.
 # author: HBcao
 
-root=$(dirname $(readlink $0));
+rawpath=$(readlink $0);
+if [ -z $rawpath ]; then
+  rawpath=$(pwd)/$(echo $0 | sed 's/^\.\///');
+fi
+root=$(dirname $rawpath);
 bots=();
 commands=();
 
@@ -13,6 +17,13 @@ for i in *; do
     bots[${#bots[@]}]=$i;
   fi
 done
+if [ ${#bots[@]} = 0 ] && [ -f ".env" ]; then
+  bots=(.);
+fi
+if [ ${#bots[@]} = 0 ]; then
+  echo "当前根目录下缺少 .env 文件, 或存在 .env 文件的目录"
+  exit 1
+fi
 
 choose() {
   for i in ${!bots[@]}; do
