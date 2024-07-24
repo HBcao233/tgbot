@@ -1,6 +1,5 @@
-import asyncio
 import config
-from .file import getCache
+from .file import getCache, getRootFile
 
 
 async def get_file(file_id, name=None):
@@ -9,12 +8,11 @@ async def get_file(file_id, name=None):
   file = await config.app.bot.getFile(file_id)
   file_path = file.file_path
   if config.local_mode:
-    file_path = file_path.replace(config.base_file_url + config.token + '/', '', 1)
+    file_path = file_path.replace(config.base_file_url + config.token + '/', '', 1).replace('/var/lib/', '', 1)
   
   img = getCache(name)
-  proc = await asyncio.create_subprocess_exec(
-    'docker', 'cp', f'telegram-bot-api:{file_path}', img,
-  )
-  await proc.wait()
+  with open(getRootFile(file_path), 'rb') as f1:
+    with open(img, 'wb') as f2:
+      f2.write(f1.read())
   return img
   

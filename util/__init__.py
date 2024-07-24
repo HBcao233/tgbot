@@ -11,6 +11,7 @@ from .file import (
   getResource,
   getDataFile,
   getCache,
+  getBotFile,
 )
 
 from .media import (
@@ -44,6 +45,7 @@ __all__ = [
   'getResource',
   'getDataFile',
   'getCache',
+  'getBotFile',
   
   'videoInfo',
   'getPhotoThumbnail',
