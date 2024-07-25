@@ -1,6 +1,8 @@
 import traceback
 import re
 import os.path
+import inspect
+
 import config
 from util.log import logger
 
@@ -15,7 +17,7 @@ class Command:
     scope="",
   ):
     self.cmd = cmd
-    self.func = self(func)
+    self.func = func
     self.pattern = pattern
     self.private_pattern = private_pattern
     self.info = info
@@ -27,25 +29,7 @@ class Command:
     if self.pattern is not None:
       res += f', pattern={self.pattern}'
     return res + ')'
-    
-  def __call__(self, func):
-    def wrapper(update, context, text=None, *w_args, **w_kwargs):
-      if (
-        text is None and 
-        getattr(update, 'message', None) and 
-        getattr(update.message, 'text', None)
-      ):
-        text = (
-          update.message.text
-          .strip("@"+config.bot.username)
-          .strip("/start")
-          .strip("/" + self.cmd)
-          .strip(self.cmd)
-          .strip()
-        )
-      return func(update, context, text, *w_args, **w_kwargs)
-    return wrapper
-
+  
 
 class Inline:
   def __init__(self, func, pattern, *, block=True):
@@ -68,8 +52,27 @@ class Button:
 
 def handler(cmd, **kwargs):
   def deco(func):
-    config.commands.append(Command(cmd, func, **kwargs))
-    return func
+    async def _func(update, context, text=None, *_args, **_kwargs):
+      args = inspect.signature(func).parameters
+      if 'text' not in args:
+        return await func(update, context, *_args, **_kwargs)
+      if (
+        text is None and 
+        getattr(update, 'message', None) and 
+        getattr(update.message, 'text', None)
+      ):
+        text = (
+          update.message.text
+          .lstrip("/" + cmd)
+          .lstrip("@" + config.bot.username)
+          .lstrip("/start")
+          .lstrip(cmd)
+          .strip()
+        )
+      return await func(update, context, text, *_args, **_kwargs)
+    
+    config.commands.append(Command(cmd, _func, **kwargs))
+    return _func
   return deco
     
     
