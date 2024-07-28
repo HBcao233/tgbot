@@ -3,16 +3,19 @@ import config
 
 
 def _getFile(path='', name=''):
-  f = ''
+  f = os.path.join(path, name)
+  if os.path.isfile(f) or '.' in name:
+    return f
+    
+  f = os.path.join(path, f'{name}.cache')
+  if os.path.isfile(f):
+    return f
+  
   for i in os.listdir(path):
     if os.path.splitext(i)[0] == name:
-      f = i
-      break
-  if f == "":
-    f = name
-    if "." not in f:
-      f += ".cache"
-  return os.path.join(path, f)
+      return i
+  
+  return os.path.join(path, f'{name}.cache')
   
 def getFile(dir_name='', name=''):
   name = str(name)
@@ -34,13 +37,13 @@ def getDataFile(name=''):
   return getFile("data/", name)
   
 def getCache(name=''):
-  path = getFile("data/cache/")
+  path = getDataFile("cache/")
   if not os.path.isdir(path):
     os.mkdir(path)
-  return getFile("data/cache/", name)
+  return getDataFile(os.path.join("cache/", str(name)))
 
-def getRootFile(name=''):
-  return _getFile(os.path.dirname(config.botRoot), name)
+def getWorkFile(name=''):
+  return _getFile(config.workPath, name)
 
 def getBotFile(name=''):
   return _getFile(os.path.join(os.path.dirname(config.botRoot), "telegram-bot-api/"), name)

@@ -1,5 +1,5 @@
 import config
-from .file import getCache, getRootFile
+from .file import getCache, getWorkFile
 
 
 async def get_file(file_id, name=None):
@@ -11,7 +11,7 @@ async def get_file(file_id, name=None):
     file_path = file_path.replace(config.base_file_url + config.token + '/', '', 1).replace('/var/lib/', '', 1)
   
   img = getCache(name)
-  with open(getRootFile(file_path), 'rb') as f1:
+  with open(getWorkFile(file_path), 'rb') as f1:
     with open(img, 'wb') as f2:
       f2.write(f1.read())
   return img

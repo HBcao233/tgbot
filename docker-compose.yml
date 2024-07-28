@@ -19,4 +19,5 @@ services:
     network_mode: "host"
     volumes:
       - .:/tgbot
+    stop_signal: SIGINT
   

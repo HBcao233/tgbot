@@ -13,7 +13,8 @@ if __name__ == "__main__":
   path = sys.argv[1] if len(sys.argv) > 1 else None
   path = path.replace('./', '')
   config.botName = path
-  path = os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+  config.workPath = os.path.dirname(os.path.realpath(__file__))
+  path = os.path.join(config.workPath, path)
   config.botRoot = path
   if not os.path.isdir(path) or not os.path.isfile(os.path.join(path, '.env')):
     print(f'"{path}" is not a bot dir')
