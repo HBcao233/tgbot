@@ -1,4 +1,11 @@
 # tgbot
+# 项目迁移中
+## 本项目正在用 telethon 重写, 本项目不再更新
+## 新项目地址: https://github.com/HBcao233/mtgbot
+# Migrating to telethon
+## This repo will be deprecated
+## new repo: https://github.com/HBcao233/mtgbot
+
 一个 Telegram 机器人框架
 
 示例的 hbcao1bot 机器人可以解析 pixiv.net, x.com, e-hentai.org, exhentai.org, kemono.su 等发送至 tg
