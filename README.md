@@ -1,9 +1,9 @@
 # tgbot
-# 项目迁移中
-## 本项目正在用 telethon 重写, 本项目不再更新
-## 新项目地址: https://github.com/HBcao233/mtgbot
-# Migrating to telethon
-## This repo will be deprecated
+# 该仓库已弃用
+## 本项目已用 telethon 重写,
+## 新仓库地址: https://github.com/HBcao233/mtgbot
+# Had Migrated to telethon
+## This repo had deprecated now
 ## new repo: https://github.com/HBcao233/mtgbot
 
 一个 Telegram 机器人框架

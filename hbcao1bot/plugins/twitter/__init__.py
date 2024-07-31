@@ -67,6 +67,13 @@ async def _tid(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
   await message.reply_chat_action(action='upload_photo')
   # 格式化媒体
   medias = parseMedias(tweet)
+  if len(medias) == 0:
+    return await message.reply_text(
+      msg,
+      parse_mode='HTML',
+      reply_to_message_id=message.message_id
+    )
+    
   ms = []
   videos = util.Data('videos')
   for media in medias:
